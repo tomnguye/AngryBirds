@@ -1,36 +1,48 @@
 #include <Eigen/Eigen>
+#include <optional>
+
+enum obj_type {
+    RECTANGLE,
+    CIRCLE,
+};
 
 class PhysicsObject{
     public:
-        Eigen::Vector3f position;
-        Eigen::Vector3f velocity; 
-        Eigen::Vector3f rotation;
+        obj_type type;
+        Eigen::Vector2f position;
+        Eigen::Vector2f velocity; 
+        Eigen::Vector2f rotation;
         float boundingSphere;
         bool stationary;
         PhysicsObject(
-            const Eigen::Vector3f p = {0,0,0}, 
-            const Eigen::Vector3f v = {0,0,0}, 
-            const Eigen::Vector3f r = {0,0,0},
-            float bs = 1,
+            obj_type t,
+            const Eigen::Vector2f p = Eigen::Vector2f::Zero(), 
+            const Eigen::Vector2f v = Eigen::Vector2f::Zero(), 
+            const Eigen::Vector2f r = Eigen::Vector2f::Zero(),
             bool s = false) 
         {
+            type = t;
             position = p;
             velocity = v;
             rotation = r;
-            boundingSphere = bs;
             stationary = s;
         }
 };
 
-class Sphere : public PhysicsObject {
+class Circle : public PhysicsObject {
     public:
-        float radius;
-        Sphere(float r, Eigen::Vector3f p = {0,0,0}, Eigen::Vector3f v = {0,0,0}) : PhysicsObject(p, v, r) {
-            radius = r;
-        };
+    float radius;
+    Circle(float r, Eigen::Vector2f p = Eigen::Vector2f::Zero(), Eigen::Vector2f v = Eigen::Vector2f::Zero()) : PhysicsObject(CIRCLE, p, v) {
+        radius = r;
+        boundingSphere = r;
+    };
 };
 
 class Rectangle : public PhysicsObject {
     public:
-
-}
+    Eigen::Vector2f dimentions;
+    Rectangle(Eigen::Vector2f d, Eigen::Vector2f p = Eigen::Vector2f::Zero(), Eigen::Vector2f v = Eigen::Vector2f::Zero()) : PhysicsObject(RECTANGLE, p, v) {
+        dimentions = d;
+        boundingSphere = dimentions.norm();
+    };
+};

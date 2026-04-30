@@ -64,16 +64,19 @@ void drawBall(float x, float y, float vx, float radius = 0.5f)
 int main()
 {
     auto eng = PhysicsEngine();
-    eng.setState({Sphere(0.5f, Eigen::Vector3f {2, 2, 2}, Eigen::Vector3f {0.2f, 0, 0})
-                , Sphere(0.5f, Eigen::Vector3f {4, 4, 2}, Eigen::Vector3f {0, -0.2f, 0})
-                , Sphere(0.5f, Eigen::Vector3f {6, 4, 2}, Eigen::Vector3f {-0.1f, -0.2f, 0})});
+    std::vector<std::unique_ptr<PhysicsObject>> objs;
+    objs.push_back(std::make_unique<Circle>(0.5f, Eigen::Vector2f {2, 2}, Eigen::Vector2f {0.4f, 0}));
+    objs.push_back(std::make_unique<Circle>(0.5f, Eigen::Vector2f {4, 4}, Eigen::Vector2f {0, -0.4f}));
+    objs.push_back(std::make_unique<Circle>(0.5f, Eigen::Vector2f {6, 4}, Eigen::Vector2f {-0.2f, -0.4f}));
+
+    eng.setState(std::move(objs));
     while (true)
     {
         eng.advanceState();
         drawFloor();
-        auto s = eng.getState();
-        for (uint i = 0; i < eng.getState().size(); i++) {
-            drawBall(s[i].position[0], s[i].position[1], s[i].velocity[0], s[i].boundingSphere);
+        const auto& s = eng.getState();
+        for (uint i = 0; i < s.size(); i++) {
+            drawBall(s[i]->position[0], s[i]->position[1], s[i]->velocity[0], s[i]->boundingSphere);
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(16));
         for (auto [row, col, val] : lastDrawn) {

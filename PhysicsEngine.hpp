@@ -27,14 +27,14 @@ class PhysicsEngine {
     };
 
     void advanceState();
-    int setState(std::vector<PhysicsObject>);
-    std::vector<PhysicsObject> getState();
+    void updatePhysics(PhysicsObject& obj);
+    int setState(std::vector<std::unique_ptr<PhysicsObject>>);
+    const std::vector<std::unique_ptr<PhysicsObject>>& getState();
 
     private:
-    std::vector<PhysicsObject> objects;
-    std::optional<Eigen::Vector3f> newtonsMethod(PhysicsObject&, 
-        Eigen::Vector3f (*)(Eigen::Vector3f, PhysicsObject, PhysicsEngine), 
-        Eigen::Matrix3f (*)(Eigen::Vector3f, PhysicsEngine));
-    void updatePhysics(PhysicsObject&);
-    std::vector<std::pair<int, int>> Colliding_objects(std::vector<PhysicsObject>& objs);
+    std::vector<std::unique_ptr<PhysicsObject>> objects;
+    std::optional<Eigen::Vector2f> newtonsMethod(PhysicsObject&, 
+        Eigen::Vector2f (*)(Eigen::Vector2f, const PhysicsObject&, const PhysicsEngine&), 
+        Eigen::Matrix2f (*)(Eigen::Vector2f, const PhysicsEngine&));
+    std::vector<std::pair<int, int>> colliding_objects(std::vector<std::unique_ptr<PhysicsObject>>& objs);
 };

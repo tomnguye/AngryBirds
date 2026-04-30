@@ -1,10 +1,10 @@
 #include "PhysicsEngine.hpp"
 #include <stdio.h>
 
-std::optional<Eigen::Vector3f> PhysicsEngine::newtonsMethod(PhysicsObject& obj, Eigen::Vector3f (*f)(Eigen::Vector3f, PhysicsObject, PhysicsEngine), Eigen::Matrix3f (*fPrime)(Eigen::Vector3f, PhysicsEngine)) {
-    Eigen::Vector3f y, x1;
-    Eigen::Matrix3f yPrime;
-    Eigen::Vector3f x0 = obj.velocity;
+std::optional<Eigen::Vector2f> PhysicsEngine::newtonsMethod(PhysicsObject& obj, Eigen::Vector2f (*f)(Eigen::Vector2f, const PhysicsObject&, const PhysicsEngine&), Eigen::Matrix2f (*fPrime)(Eigen::Vector2f, const PhysicsEngine&)) {
+    Eigen::Vector2f y, x1;
+    Eigen::Matrix2f yPrime;
+    Eigen::Vector2f x0 = obj.velocity;
     for (int _ = 0; _ < maxIterations; _++) {
         y = f(x0, obj, *this);
         yPrime = fPrime(x0, *this);
@@ -16,21 +16,22 @@ std::optional<Eigen::Vector3f> PhysicsEngine::newtonsMethod(PhysicsObject& obj, 
     return std::nullopt;
 }
 
-int PhysicsEngine::setState(std::vector<PhysicsObject> objs) {
-    objects = objs;
+int PhysicsEngine::setState(std::vector<std::unique_ptr<PhysicsObject>> objs) {
+    objects = std::move(objs);
     return 0;
 }
 
-std::vector<PhysicsObject> PhysicsEngine::getState() {
+const std::vector<std::unique_ptr<PhysicsObject>>& PhysicsEngine::getState() {
     return objects;
 }
 
 void PhysicsEngine::advanceState() {
     for (auto& obj: objects) {
-        updatePhysics(obj);
+        updatePhysics(*obj);
     }
-    auto c = Colliding_objects(objects);
+    auto c = colliding_objects(objects);
     for (auto& [a,b]: c) {
+        std::cerr << "\033[" << "0;0H";
         std::cerr << "collision" << a << b << c.size() << std::endl;
     }
 }
@@ -39,11 +40,11 @@ void PhysicsEngine::updatePhysics(PhysicsObject& obj)
 {
     // obj.velocity[1] += g * dt;
 
-    auto f = [](Eigen::Vector3f vNew, PhysicsObject obj, PhysicsEngine eng) -> Eigen::Vector3f {
+    auto f = [](Eigen::Vector2f vNew, const PhysicsObject& obj, const PhysicsEngine& eng) -> Eigen::Vector2f {
         return vNew - obj.velocity + eng.dragCoeff * eng.dt * vNew.norm() * vNew; 
     };
-    auto fPrime = [](Eigen::Vector3f vNew, PhysicsEngine eng) -> Eigen::Matrix3f {
-        return Eigen::Matrix3f::Identity() + eng.dt * eng.dragCoeff * (vNew.norm() * Eigen::Matrix3f::Identity() + (vNew * vNew.transpose())/vNew.norm());
+    auto fPrime = [](Eigen::Vector2f vNew, const PhysicsEngine& eng) -> Eigen::Matrix2f {
+        return Eigen::Matrix2f::Identity() + eng.dt * eng.dragCoeff * (vNew.norm() * Eigen::Matrix2f::Identity() + (vNew * vNew.transpose())/vNew.norm());
     };
 
     auto result = newtonsMethod(obj, f, fPrime);
@@ -63,12 +64,23 @@ void PhysicsEngine::updatePhysics(PhysicsObject& obj)
     obj.position += obj.velocity * dt;
 }
 
-std::vector<std::pair<int, int>> PhysicsEngine::Colliding_objects(std::vector<PhysicsObject>& objs) {
+bool check_collision(PhysicsObject& obj1, PhysicsObject& obj2) {
+    if (obj1.type == CIRCLE && obj2.type == CIRCLE) {
+        return true;
+    }
+    if (obj1.type == RECTANGLE && obj2.type == RECTANGLE) {
+        return true;
+    }
+    printf("%d, %d", obj1.type, obj2.type);
+    return false;
+}
+
+std::vector<std::pair<int, int>> PhysicsEngine::colliding_objects(std::vector<std::unique_ptr<PhysicsObject>>& objs) {
     std::vector<std::pair<int, int>> collisions = {}; 
     for (uint i = 0; i < objs.size(); i ++) {
         for (uint j = i + 1; j < objs.size(); j++) {
-            if ((objs[i].position - objs[j].position).norm() <= objs[i].boundingSphere + objs[j].boundingSphere) {
-                if (true) {// NOTE replace with actual check
+            if (((*objs[i]).position - (*objs[j]).position).norm() <= (*objs[i]).boundingSphere + (*objs[j]).boundingSphere) {
+                if (check_collision(*objs[i], *objs[j])) {
                     collisions.push_back(std::pair(i,j));
                 }
             }
