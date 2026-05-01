@@ -41,6 +41,8 @@ void PhysicsEngine::advanceState() {
         
         // 4. Collision normal and penetration
         Eigen::Vector2f correction = normal * penetration / (a->inv_mass + b->inv_mass);
+        a->position -= correction * a->inv_mass;
+        b->position += correction * b->inv_mass;
 
         // 5. Collision response impulse
         Eigen::Vector2f relativeVelocity = b->velocity - a->velocity;
