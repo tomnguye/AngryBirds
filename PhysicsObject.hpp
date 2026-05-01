@@ -11,14 +11,14 @@ class PhysicsObject{
         obj_type type;
         Eigen::Vector2f position;
         Eigen::Vector2f velocity; 
-        Eigen::Vector2f rotation;
-        float boundingSphere;
+        float rotation; // In radians
+        float boundingRadius;
         bool stationary;
         PhysicsObject(
             obj_type t,
             const Eigen::Vector2f p = Eigen::Vector2f::Zero(), 
             const Eigen::Vector2f v = Eigen::Vector2f::Zero(), 
-            const Eigen::Vector2f r = Eigen::Vector2f::Zero(),
+            float r = 0,
             bool s = false) 
         {
             type = t;
@@ -34,15 +34,17 @@ class Circle : public PhysicsObject {
     float radius;
     Circle(float r, Eigen::Vector2f p = Eigen::Vector2f::Zero(), Eigen::Vector2f v = Eigen::Vector2f::Zero()) : PhysicsObject(CIRCLE, p, v) {
         radius = r;
-        boundingSphere = r;
+        boundingRadius = r;
     };
 };
 
 class Rectangle : public PhysicsObject {
     public:
     Eigen::Vector2f dimentions;
-    Rectangle(Eigen::Vector2f d, Eigen::Vector2f p = Eigen::Vector2f::Zero(), Eigen::Vector2f v = Eigen::Vector2f::Zero()) : PhysicsObject(RECTANGLE, p, v) {
+    float baseAngle;
+    Rectangle(Eigen::Vector2f d, Eigen::Vector2f p = Eigen::Vector2f::Zero(), Eigen::Vector2f v = Eigen::Vector2f::Zero(), float r = 0) : PhysicsObject(RECTANGLE, p, v, r) {
         dimentions = d;
-        boundingSphere = dimentions.norm();
+        baseAngle = atan2f(d[1], d[0]);
+        boundingRadius = dimentions.norm() / 2.0f;
     };
 };
