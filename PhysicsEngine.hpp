@@ -1,3 +1,4 @@
+#pragma once
 #include <vector>
 
 #include <iostream>
@@ -9,6 +10,8 @@
 #include <Eigen/Eigen>
 
 #include "PhysicsObject.hpp"
+#include "CollisionEvent.hpp"
+#include "CollisionDetection.hpp"
 
 class PhysicsEngine {
     public:
@@ -26,6 +29,10 @@ class PhysicsEngine {
         // add config later
     };
 
+    std::vector<CollisionEvent> getCollisions() {
+        return colliding_objects(objects);
+    }
+
     void advanceState();
     void updatePhysics(PhysicsObject& obj);
     int setState(std::vector<std::unique_ptr<PhysicsObject>>);
@@ -36,5 +43,5 @@ class PhysicsEngine {
     std::optional<Eigen::Vector2f> newtonsMethod(PhysicsObject&, 
         Eigen::Vector2f (*)(Eigen::Vector2f, const PhysicsObject&, const PhysicsEngine&), 
         Eigen::Matrix2f (*)(Eigen::Vector2f, const PhysicsEngine&));
-    std::vector<std::pair<int, int>> colliding_objects(std::vector<std::unique_ptr<PhysicsObject>>& objs);
+    
 };

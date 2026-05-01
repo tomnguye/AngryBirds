@@ -76,7 +76,31 @@ void drawRect(cv::Mat& frame, float x, float y, Eigen::Vector2f dims, float rota
                cv::Scalar(0, 0, 255), 1);
 }
 
+    void drawCollisionEvents(cv::Mat& frame, std::vector<CollisionEvent>& events)
+    {
+        for (auto& event : events)
+        {
+            cv::Point2i contact = toPixel(event.contactPoint[0], event.contactPoint[1]);
 
+            // Draw contact point
+            cv::circle(frame, contact, 4, cv::Scalar(0, 0, 255), cv::FILLED);
+
+            // Draw normal arrow — scale it so it's visible
+            float arrowLen = 1.0f;
+            cv::Point2i arrowEnd = toPixel(
+                event.contactPoint[0] + event.contactNormal[0] * arrowLen,
+                event.contactPoint[1] + event.contactNormal[1] * arrowLen
+            );
+            cv::arrowedLine(frame, contact, arrowEnd, cv::Scalar(0, 0, 255), 2);
+
+            // Draw opposite normal for objB
+            cv::Point2i arrowEndB = toPixel(
+                event.contactPoint[0] - event.contactNormal[0] * arrowLen,
+                event.contactPoint[1] - event.contactNormal[1] * arrowLen
+            );
+            cv::arrowedLine(frame, contact, arrowEndB, cv::Scalar(255, 0, 0), 2);
+        }
+    }
 // =====================================================
 // MAIN
 // =====================================================
@@ -88,10 +112,9 @@ int main()
     // Circles
     objs.push_back(std::make_unique<Circle>(0.5f, Eigen::Vector2f{2, 2}, Eigen::Vector2f{0.35f, 0}));
     // objs.push_back(std::make_unique<Rectangle>(Eigen::Vector2f{1.0f, 0.5f}, Eigen::Vector2f{2, 2}, Eigen::Vector2f{0.4f, 0}, -0.3f)); // 0.3 radians
-    // objs.push_back(std::make_unique<Circle>(0.5f, Eigen::Vector2f{4, 4}, Eigen::Vector2f{0, -0.4f}));
+    objs.push_back(std::make_unique<Circle>(0.5f, Eigen::Vector2f{4, 4}, Eigen::Vector2f{0, -0.4f}));
 
-    // Rectangles — adjust your Rectangle constructor as needed
-    objs.push_back(std::make_unique<Rectangle>(Eigen::Vector2f{1.0f, 0.5f}, Eigen::Vector2f{6, 4}, Eigen::Vector2f{-0.2f, -0.4f}, 0.3f)); // 0.3 radians
+    // objs.push_back(std::make_unique<Rectangle>(Eigen::Vector2f{1.0f, 0.5f}, Eigen::Vector2f{6, 4}, Eigen::Vector2f{-0.2f, -0.4f}, 0.3f)); // 0.3 radians
 
     eng.setState(std::move(objs));
 
@@ -117,6 +140,8 @@ int main()
                         r->dimentions, r->rotation, r->boundingRadius);
             }
         }
+        auto collisions = eng.getCollisions();
+        drawCollisionEvents(frame, collisions);
 
         cv::imshow("Physics Sim", frame);
         int key = cv::waitKey(16);
