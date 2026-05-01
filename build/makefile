@@ -1,5 +1,5 @@
 CXX = g++
-CXXFLAGS = -g -Wall -std=c++17 -I/usr/include/eigen3 -I/usr/include/opencv4
+CXXFLAGS = -g -Wall -std=c++17 -I/usr/include/eigen3 -I/usr/include/opencv4 
 LDFLAGS  = -lopencv_core -lopencv_highgui -lopencv_imgproc -lopencv_imgcodecs
 VPATH = ..
 
