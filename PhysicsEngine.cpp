@@ -31,10 +31,39 @@ void PhysicsEngine::advanceState() {
     for (auto& obj: objects) {
         updatePhysics(*obj);
     }
-    // auto c = colliding_objects(objects);
-    // for (auto& [a,b]: c) {
-    //     std::cerr << "collision" << a << b << c.size() << std::endl;
-    // }
+    auto c = colliding_objects(objects);
+    for (auto& event: c) {
+        PhysicsObject* a = event.objA;
+        PhysicsObject* b = event.objB;
+        float penetration = event.penetrationDepth;
+        Eigen::Vector2f point = event.contactPoint;
+        Eigen::Vector2f normal = event.contactNormal;
+        
+        // 4. Collision normal and penetration
+        Eigen::Vector2f correction = normal * penetration / (a->inv_mass + b->inv_mass);
+
+        // 5. Collision response impulse
+        Eigen::Vector2f relativeVelocity = b->velocity - a->velocity;
+        float velAlongNormal = relativeVelocity.dot(normal);
+
+        if (velAlongNormal <= 0) { // Check if theyre already moving apart, this is to stop them from stacking velocity by being collided.
+            float j = -(1 + restitution) * velAlongNormal;
+            j /= a->inv_mass + b->inv_mass;
+
+            Eigen::Vector2f impulse = j * normal;
+            a->velocity -= impulse * a->inv_mass;
+            b->velocity += impulse * b->inv_mass;
+
+            // 6. Rotation from off-center hits
+            Eigen::Vector2f ra = point - a->position;
+            Eigen::Vector2f rb = point - b->position;
+            
+            a->angularVelocity += (ra.x() * impulse.y() - ra.y() * impulse.x()) * a->inv_inertia;
+            b->angularVelocity += (rb.x() * impulse.y() - rb.y() * impulse.x()) * b->inv_mass;
+        }
+
+        
+    }
 }
 
 void PhysicsEngine::updatePhysics(PhysicsObject& obj)
@@ -63,4 +92,8 @@ void PhysicsEngine::updatePhysics(PhysicsObject& obj)
     }
 
     obj.position += obj.velocity * dt;
+    obj.rotation += obj.angularVelocity * dt;
+
+    // 7. Brick motion after impact, TODO: I DONT LIKE THIS.
+    obj.angularVelocity *= 0.995;
 }

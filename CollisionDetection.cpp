@@ -83,21 +83,27 @@ std::optional<CollisionEvent> circleRectCollision(Circle& c, Rectangle& r)
     if ((dx*dx + dy*dy) > c.radius * c.radius) {
         return std::nullopt;
     }
+    float penetrationDepth = c.radius - sqrtf(dx*dx + dy*dy);
     Eigen::Vector2f contactWorld = {
         r.position[0] + clampedX * cosR - clampedY * sinR,
         r.position[1] + clampedX * sinR + clampedY * cosR
     };
-    Eigen::Vector2f normal = (c.position - contactWorld);
+    Eigen::Vector2f normal = (contactWorld - c.position);
     float len = normal.norm();
     if (len > 1e-6f) normal /= len;
     else normal = { cosR, sinR };
 
-    return CollisionEvent(&c, &r, contactWorld, normal);
+    return CollisionEvent(&c, &r, penetrationDepth, contactWorld, normal);
 }
 
  std::optional<CollisionEvent> check_collision(PhysicsObject& obj1, PhysicsObject& obj2) {
     if (obj1.type == CIRCLE && obj2.type == CIRCLE) {
-        CollisionEvent collision (&obj1, &obj2, (obj1.position + obj2.position)/2, (obj1.position - obj2.position).normalized());
+        Circle circle1 = static_cast<Circle&>(obj1);
+        Circle circle2 = static_cast<Circle&>(obj2);
+        float penetrationDepth = circle1.radius + circle2.radius - (circle2.position - circle1.position).norm();
+        Eigen::Vector2f normal = (circle2.position - circle1.position).normalized();
+        Eigen::Vector2f contactPoint = circle1.position + normal * circle1.radius; // Assume that the collision point is the edge of circle 1.
+        CollisionEvent collision (&obj1, &obj2, penetrationDepth, contactPoint, normal);
         return collision;
     }
     if (obj1.type == RECTANGLE && obj2.type == RECTANGLE) {
