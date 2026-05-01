@@ -10,7 +10,7 @@ float wrapAngle(float a) {
 }
 
 // Tests if there is a separating axis along axisRect's local axes
-bool hasGap(Rectangle& axisRect, Rectangle& otherRect, Eigen::Vector2f centerOffset)
+std::optional<CollisionEvent> hasGap(Rectangle& axisRect, Rectangle& otherRect, Eigen::Vector2f centerOffset)
 {
     float halfDiag = otherRect.dimentions.norm() / 2.0f;
     float baseAngle = atan2f(otherRect.dimentions[1], otherRect.dimentions[0]);
@@ -42,21 +42,25 @@ bool hasGap(Rectangle& axisRect, Rectangle& otherRect, Eigen::Vector2f centerOff
     float extentOtherX = halfDiag * cosf(closestAngle(0)       + relRot);
     float extentOtherY = halfDiag * cosf(closestAngle(M_PI/2)  + relRot - M_PI/2);
 
-    if (fabsf(sepX) > extentX + fabsf(extentOtherX)) return true;
-    if (fabsf(sepY) > extentY + fabsf(extentOtherY)) return true;
+    if (fabsf(sepX) > extentX + fabsf(extentOtherX)) return std::nullopt;
+    if (fabsf(sepY) > extentY + fabsf(extentOtherY)) return std::nullopt;
 
-    return false;
+    return std::nullopt;
 }
 
-bool satRectRect(Rectangle& a, Rectangle& b)
+// SAT method for collision detection
+std::optional<CollisionEvent> satRectRect(Rectangle& a, Rectangle& b)
 {
     Eigen::Vector2f centerOffset = a.position - b.position;
-    if (hasGap(b, a, centerOffset))  return false;
-    if (hasGap(a, b, -centerOffset)) return false;
-    return true;
+    std::optional<CollisionEvent> collisionA = hasGap(b, a, centerOffset);
+    std::optional<CollisionEvent> collisionB = hasGap(a, b, -centerOffset);
+
+    if (!collisionA.has_value()) return std::nullopt;
+    if (!collisionB.has_value()) return std::nullopt;
+    return std::nullopt;
 }
 
-bool circleRectCollision(Circle& c, Rectangle& r)
+std::optional<CollisionEvent> circleRectCollision(Circle& c, Rectangle& r)
 {
     float cosR = cosf(r.rotation);
     float sinR = sinf(r.rotation);
@@ -76,7 +80,19 @@ bool circleRectCollision(Circle& c, Rectangle& r)
     // Distance from circle center to closest point on rect
     float dx = localX - clampedX;
     float dy = localY - clampedY;
-    return (dx*dx + dy*dy) <= c.radius * c.radius;
+    if ((dx*dx + dy*dy) > c.radius * c.radius) {
+        return std::nullopt;
+    }
+    Eigen::Vector2f contactWorld = {
+        r.position[0] + clampedX * cosR - clampedY * sinR,
+        r.position[1] + clampedX * sinR + clampedY * cosR
+    };
+    Eigen::Vector2f normal = (c.position - contactWorld);
+    float len = normal.norm();
+    if (len > 1e-6f) normal /= len;
+    else normal = { cosR, sinR };
+
+    return CollisionEvent(&c, &r, contactWorld, normal);
 }
 
  std::optional<CollisionEvent> check_collision(PhysicsObject& obj1, PhysicsObject& obj2) {
@@ -89,12 +105,10 @@ bool circleRectCollision(Circle& c, Rectangle& r)
         return std::nullopt;
     }
     if (obj1.type == CIRCLE && obj2.type == RECTANGLE) {
-        circleRectCollision(static_cast<Circle&>(obj1), static_cast<Rectangle&>(obj2));
-        std::nullopt;
+        return circleRectCollision(static_cast<Circle&>(obj1), static_cast<Rectangle&>(obj2));
     }
     if (obj1.type == RECTANGLE && obj2.type == CIRCLE) {
-        circleRectCollision(static_cast<Circle&>(obj2), static_cast<Rectangle&>(obj1));
-        std::nullopt;
+        return circleRectCollision(static_cast<Circle&>(obj2), static_cast<Rectangle&>(obj1));
     }
     return std::nullopt;
 }

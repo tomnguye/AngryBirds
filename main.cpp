@@ -110,11 +110,11 @@ int main()
     std::vector<std::unique_ptr<PhysicsObject>> objs;
 
     // Circles
-    objs.push_back(std::make_unique<Circle>(0.5f, Eigen::Vector2f{2, 2}, Eigen::Vector2f{0.35f, 0}));
+    objs.push_back(std::make_unique<Circle>(0.5f, Eigen::Vector2f{2, 2}, Eigen::Vector2f{0.7f, 0}));
     // objs.push_back(std::make_unique<Rectangle>(Eigen::Vector2f{1.0f, 0.5f}, Eigen::Vector2f{2, 2}, Eigen::Vector2f{0.4f, 0}, -0.3f)); // 0.3 radians
-    objs.push_back(std::make_unique<Circle>(0.5f, Eigen::Vector2f{4, 4}, Eigen::Vector2f{0, -0.4f}));
+    objs.push_back(std::make_unique<Circle>(0.5f, Eigen::Vector2f{4, 4}, Eigen::Vector2f{0, -0.8f}));
 
-    // objs.push_back(std::make_unique<Rectangle>(Eigen::Vector2f{1.0f, 0.5f}, Eigen::Vector2f{6, 4}, Eigen::Vector2f{-0.2f, -0.4f}, 0.3f)); // 0.3 radians
+    objs.push_back(std::make_unique<Rectangle>(Eigen::Vector2f{1.0f, 0.5f}, Eigen::Vector2f{6, 4}, Eigen::Vector2f{-0.2f, -0.4f}, 0.3f)); // 0.3 radians
 
     eng.setState(std::move(objs));
 
