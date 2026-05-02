@@ -16,15 +16,15 @@
 class PhysicsEngine {
     public:
     const int step = 16;
-    // const float dt = (float) step / 1000;
-    const float dt = 0.001f;   // slowed down for testing
+    const float dt = (float) step / 1000;
+    // const float dt = 0.001f;   // slowed down for testing
     const float g = -9.8f;
-    float restitution = 0.7f;
+    float restitution = 0.3f;
     float friction = 0.8f;
     float dragCoeff = 0.02f;
     float tolerance = 0.0001;
     float epsilon = 0.0001;
-    int maxIterations = 16;
+    int maxIterations = 100;
 
     PhysicsEngine() {
         // add config later

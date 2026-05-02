@@ -23,4 +23,4 @@ include_directories(${EIGEN3_INCLUDE_DIR} ${OpenCV_INCLUDE_DIRS})
 
 # include_directories(/usr/local/include ./include)
 add_executable(main main.cpp CollisionDetection.hpp CollisionDetection.cpp CollisionEvent.hpp PhysicsEngine.hpp PhysicsEngine.cpp PhysicsObject.hpp)
-target_link_libraries(main ${OpenCV_LIBRARIES})
+target_link_libraries(main ${OpenCV_LIBRARIES} GL GLEW glfw)

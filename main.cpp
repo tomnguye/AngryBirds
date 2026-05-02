@@ -347,6 +347,16 @@ int main()
             if (obj->type == CIRCLE) {
                 auto* c = static_cast<Circle*>(obj.get());
                 drawCircle(shapeVerts, c->position[0], c->position[1], c->radius);
+
+                float cx = c->position[0];
+                float cy = c->position[1];
+
+                float angle = c->rotation;
+
+                float mx = cx + cosf(angle) * c->radius;
+                float my = cy + sinf(angle) * c->radius;
+
+                drawCircle(shapeVerts, mx, my, 0.05f);
             }
             else if (obj->type == RECTANGLE) {
                 auto* r = static_cast<Rectangle*>(obj.get());
@@ -374,20 +384,22 @@ int main()
             drawLine(bandVerts, forkRX, forkY, ballX, ballY, 0.006f);
         }
 
+        
+
         // Collision debug
-        float arrowLen = 0.8f;
-        for (auto& ev : collisions)
-        {
-            float cx = ev.contactPoint[0], cy = ev.contactPoint[1];
-            float nx = ev.contactNormal[0], ny = ev.contactNormal[1];
-            drawCircle(contactVerts, cx, cy, 0.08f, 12);
-            drawLine(normalVertsA,
-                     ndcX(cx), ndcY(cy),
-                     ndcX(cx + nx*arrowLen), ndcY(cy + ny*arrowLen));
-            drawLine(normalVertsB,
-                     ndcX(cx), ndcY(cy),
-                     ndcX(cx - nx*arrowLen), ndcY(cy - ny*arrowLen));
-        }
+        // float arrowLen = 0.8f;
+        // for (auto& ev : collisions)
+        // {
+        //     float cx = ev.contactPoint[0], cy = ev.contactPoint[1];
+        //     float nx = ev.contactNormal[0], ny = ev.contactNormal[1];
+        //     drawCircle(contactVerts, cx, cy, 0.08f, 12);
+        //     drawLine(normalVertsA,
+        //              ndcX(cx), ndcY(cy),
+        //              ndcX(cx + nx*arrowLen), ndcY(cy + ny*arrowLen));
+        //     drawLine(normalVertsB,
+        //              ndcX(cx), ndcY(cy),
+        //              ndcX(cx - nx*arrowLen), ndcY(cy - ny*arrowLen));
+        // }
 
         drawBatch(vao, vbo, shapeVerts,   prog, 0.0f, 0.863f, 1.0f); // cyan   — objects
         drawBatch(vao, vbo, bandVerts,    prog, 0.9f, 0.7f,   0.2f); // yellow — elastic bands

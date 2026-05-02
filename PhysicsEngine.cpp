@@ -31,43 +31,126 @@ void PhysicsEngine::advanceState() {
     for (auto& obj: objects) {
         updatePhysics(*obj);
     }
+
     auto c = colliding_objects(objects);
     for (auto& event: c) {
         PhysicsObject* a = event.objA;
         PhysicsObject* b = event.objB;
-        float penetration = event.penetrationDepth;
-        Eigen::Vector2f point = event.contactPoint;
         Eigen::Vector2f normal = event.contactNormal;
-        
-        // 4. Collision normal and penetration
-        Eigen::Vector2f correction = normal * penetration / (a->inv_mass + b->inv_mass);
+
+        float percent = 0.9f;
+        float slop = 0.005f;
+
+        float maxDepth = 0.0f;
+        for (float d : event.penetrationDepths)
+            maxDepth = std::max(maxDepth, d);
+
+        float depth = std::max(maxDepth - slop, 0.0f);
+
+        Eigen::Vector2f correction =
+            percent * depth * normal / (a->inv_mass + b->inv_mass);
         a->position -= correction * a->inv_mass;
         b->position += correction * b->inv_mass;
+    }
 
-        // 5. Collision response impulse
-        Eigen::Vector2f relativeVelocity = b->velocity - a->velocity;
-        float velAlongNormal = relativeVelocity.dot(normal);
+    for (int j = 0; j < maxIterations; j++) {
 
-        if (velAlongNormal <= 0) { // Check if theyre already moving apart, this is to stop them from stacking velocity by being collided.
-            // 6. Rotation from off-center hits
-            Eigen::Vector2f ra = point - a->position;
-            Eigen::Vector2f rb = point - b->position;
-            
-            float raCrossN = ra.x() * normal.y() - ra.y() * normal.x();
-            float rbCrossN = rb.x() * normal.y() - rb.y() * normal.x();
-            float j = -(1 + restitution) * velAlongNormal;
-            j /= a->inv_mass + b->inv_mass
-            + raCrossN * raCrossN * a->inv_inertia
-            + rbCrossN * rbCrossN * b->inv_inertia;
 
-            Eigen::Vector2f impulse = j * normal;
-            a->velocity -= impulse * a->inv_mass;
-            b->velocity += impulse * b->inv_mass;
+        std::unordered_map<PhysicsObject*, Eigen::Vector2f> v0;
+        std::unordered_map<PhysicsObject*, float> w0;
 
-            a->angularVelocity += (ra.x() * impulse.y() - ra.y() * impulse.x()) * a->inv_inertia;
-            b->angularVelocity += (rb.x() * impulse.y() - rb.y() * impulse.x()) * b->inv_inertia;
+        for (auto& obj : objects) {
+            v0[obj.get()] = obj->velocity;
+            w0[obj.get()] = obj->angularVelocity;
+        }
+
+        for (auto& event : c) {
+            PhysicsObject* a = event.objA;
+            PhysicsObject* b = event.objB;
+            Eigen::Vector2f normal = event.contactNormal;
+
+            for (int i = 0; i < (int)event.contactPoints.size(); i++) {
+
+                Eigen::Vector2f point = event.contactPoints[i];
+
+                Eigen::Vector2f ra = point - a->position;
+                Eigen::Vector2f rb = point - b->position;
+
+                Eigen::Vector2f raPerp = {-w0[a] * ra.y(), w0[a] * ra.x()};
+                Eigen::Vector2f rbPerp = {-w0[b] * rb.y(), w0[b] * rb.x()};
+
+                Eigen::Vector2f relativeVelocity =
+                    (v0[b] + rbPerp) - (v0[a] + raPerp);
+
+                float velAlongNormal = relativeVelocity.dot(normal);
+
+                if (velAlongNormal <= 0) {
+
+                    float raCrossN = ra.x() * normal.y() - ra.y() * normal.x();
+                    float rbCrossN = rb.x() * normal.y() - rb.y() * normal.x();
+
+                    float j = -(1.0f + restitution) * velAlongNormal;
+
+                    j /= a->inv_mass + b->inv_mass
+                        + raCrossN * raCrossN * a->inv_inertia
+                        + rbCrossN * rbCrossN * b->inv_inertia;
+
+                    Eigen::Vector2f impulse = j * normal;
+
+                    v0[a] -= impulse * a->inv_mass;
+                    v0[b] += impulse * b->inv_mass;
+
+                    w0[a] -= (ra.x() * impulse.y() - ra.y() * impulse.x()) * a->inv_inertia;
+                    w0[b] += (rb.x() * impulse.y() - rb.y() * impulse.x()) * b->inv_inertia;
+
+                    Eigen::Vector2f tangent =
+                        relativeVelocity - relativeVelocity.dot(normal) * normal;
+
+                    float tlen = tangent.norm();
+                    if (tlen < 1e-6f) continue;
+                    tangent /= tlen;
+
+                    float raCrossT = ra.x() * tangent.y() - ra.y() * tangent.x();
+                    float rbCrossT = rb.x() * tangent.y() - rb.y() * tangent.x();
+
+                    float kT =
+                        a->inv_mass + b->inv_mass
+                        + raCrossT * raCrossT * a->inv_inertia
+                        + rbCrossT * rbCrossT * b->inv_inertia;
+
+                    float vt = relativeVelocity.dot(tangent);
+
+                    float jt = -vt / kT;
+
+                    float mu = 0.3f;
+                    float maxFriction = std::abs(j) * mu;
+
+                    jt = std::clamp(jt, -maxFriction, maxFriction);
+
+                    Eigen::Vector2f frictionImpulse = jt * tangent;
+
+                    v0[a] -= frictionImpulse * a->inv_mass;
+                    v0[b] += frictionImpulse * b->inv_mass;
+
+                    w0[a] -= (ra.x() * frictionImpulse.y() - ra.y() * frictionImpulse.x()) * a->inv_inertia;
+                    w0[b] += (rb.x() * frictionImpulse.y() - rb.y() * frictionImpulse.x()) * b->inv_inertia;
+                }
+            }
+        }
+
+        for (auto& obj : objects) {
+            obj->velocity = v0[obj.get()];
+            obj->angularVelocity = w0[obj.get()];
         }
     }
+    
+    for (auto& obj : objects) {
+        obj->velocity *= 0.999;
+        obj->angularVelocity *= 0.995;
+        if (fabsf(obj->angularVelocity) < 0.02f) obj->angularVelocity = 0.0f;
+        if (obj->velocity.norm() < 0.02f) obj->velocity = Eigen::Vector2f::Zero();
+    }
+    
 }
 
 void PhysicsEngine::updatePhysics(PhysicsObject& obj)
@@ -75,32 +158,21 @@ void PhysicsEngine::updatePhysics(PhysicsObject& obj)
     if (obj.stationary) {
         return;
     }
-    obj.velocity[1] += g * dt;
 
-    auto f = [](Eigen::Vector2f vNew, const PhysicsObject& obj, const PhysicsEngine& eng) -> Eigen::Vector2f {
-        return vNew - obj.velocity + eng.dragCoeff * eng.dt * vNew.norm() * vNew; 
-    };
-    auto fPrime = [](Eigen::Vector2f vNew, const PhysicsEngine& eng) -> Eigen::Matrix2f {
-        return Eigen::Matrix2f::Identity() + eng.dt * eng.dragCoeff * (vNew.norm() * Eigen::Matrix2f::Identity() + (vNew * vNew.transpose())/vNew.norm());
-    };
+    obj.velocity += Eigen::Vector2f(0.0f, g * dt);
 
-    auto result = newtonsMethod(obj, f, fPrime);
-
-    if (result.has_value()) {
-        obj.velocity = result.value();
+    float speed = obj.velocity.norm();
+    if (speed > 1e-6f) {
+        Eigen::Vector2f drag = dragCoeff * speed * obj.velocity;
+        obj.velocity -= drag * dt;
     }
-    else {
-        std::cout << "implicite fail";
-        float speed = obj.velocity.norm();
 
-        if (speed > 1e-6f) {
-            obj.velocity -= dragCoeff * speed * obj.velocity;
-        }
-    }
+    float angSpeed = obj.angularVelocity;
+    if (angSpeed > 1e-6f){
+    float angDrag = dragCoeff * angSpeed * fabs(angSpeed);
+    obj.angularVelocity -= angDrag * dt;}
 
     obj.position += obj.velocity * dt;
     obj.rotation += obj.angularVelocity * dt;
 
-    // 7. Brick motion after impact, TODO: I DONT LIKE THIS.
-    obj.angularVelocity *= 0.995;
 }

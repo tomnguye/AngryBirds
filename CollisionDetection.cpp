@@ -50,7 +50,7 @@ std::vector<Eigen::Vector2f> clipEdge(
     return result;
 }
 
-Eigen::Vector2f getContactPoint(Rectangle& axisRect, Rectangle& otherRect, Eigen::Vector2f normal)
+std::vector<Eigen::Vector2f> getContactPoint(Rectangle& axisRect, Rectangle& otherRect, Eigen::Vector2f normal)
 {
     auto vertsA = getVertices(axisRect);
     auto vertsB = getVertices(otherRect);
@@ -87,9 +87,9 @@ Eigen::Vector2f getContactPoint(Rectangle& axisRect, Rectangle& otherRect, Eigen
 
     // Clip incident edge against side planes of reference face
     auto clipped = clipEdge(v0, v1, refV0, refEdge);
-    if (clipped.size() < 2) {return (axisRect.position + otherRect.position)/2.0f;}
+    if (clipped.size() < 2) {return {(axisRect.position + otherRect.position)/2.0f};}
     clipped = clipEdge(clipped[0], clipped[1], refV1, -refEdge);
-    if (clipped.size() < 2) {return (axisRect.position + otherRect.position)/2.0f;}
+    if (clipped.size() < 2) {return {(axisRect.position + otherRect.position)/2.0f};}
 
     // Keep only points behind reference face
     std::vector<Eigen::Vector2f> contacts;
@@ -97,9 +97,8 @@ Eigen::Vector2f getContactPoint(Rectangle& axisRect, Rectangle& otherRect, Eigen
         if (refNormal.dot(p - refV0) <= 0.01f) {contacts.push_back(p);}
     }
 
-    if (contacts.empty()) {return (axisRect.position + otherRect.position) / 2.0f;}
-    if (contacts.size() == 1) {return contacts[0];}
-    return (contacts[0] + contacts[1]) / 2.0f;
+    if (contacts.empty()) {return {(axisRect.position + otherRect.position) / 2.0f};}
+    return contacts;
 }
 
 std::optional<CollisionEvent> testAxes(Rectangle& axisRect, Rectangle& otherRect, Eigen::Vector2f centerOffset)
@@ -151,8 +150,9 @@ std::optional<CollisionEvent> testAxes(Rectangle& axisRect, Rectangle& otherRect
         penetration = penY;
     }
 
-    Eigen::Vector2f contact = getContactPoint(axisRect, otherRect, normal);
-    return CollisionEvent(&axisRect, &otherRect, penetration, contact, normal);
+    std::vector<Eigen::Vector2f> contacts = getContactPoint(axisRect, otherRect, normal);
+    std::vector<float> penetrations(contacts.size(), penetration);
+    return CollisionEvent(&axisRect, &otherRect, penetrations, contacts, normal);
 }
 // SAT method for collision detection
 std::optional<CollisionEvent> satRectRect(Rectangle& a, Rectangle& b)
@@ -166,7 +166,11 @@ std::optional<CollisionEvent> satRectRect(Rectangle& a, Rectangle& b)
     if (!resultB.has_value()) return std::nullopt;
 
     // Return the axis with smallest penetration
-    if (resultA->penetrationDepth < resultB->penetrationDepth)
+    auto minPen = [](const CollisionEvent& e) {
+        return *std::min_element(e.penetrationDepths.begin(), e.penetrationDepths.end());
+    };
+
+    if (minPen(resultA.value()) < minPen(resultB.value()))
         return resultA.value();
     return resultB.value();
 }
@@ -178,7 +182,7 @@ std::optional<CollisionEvent> circleRectCollision(Circle& c, Rectangle& r)
 
     Eigen::Vector2f offset = c.position - r.position;
 
-    // Project circle center onto rect's local axes
+    // Project circle center onto rect's local axescontactWorld
     float localX = offset[0] * cosR + offset[1] * sinR;
     float localY = -offset[0] * sinR + offset[1] * cosR;
 
@@ -204,7 +208,7 @@ std::optional<CollisionEvent> circleRectCollision(Circle& c, Rectangle& r)
     if (len > 1e-6f) normal /= len;
     else normal = { cosR, sinR };
 
-    return CollisionEvent(&c, &r, penetrationDepth, contactWorld, normal);
+    return CollisionEvent(&c, &r, {penetrationDepth}, {contactWorld}, normal);
 }
 
  std::optional<CollisionEvent> check_collision(PhysicsObject& obj1, PhysicsObject& obj2) {
@@ -215,7 +219,7 @@ std::optional<CollisionEvent> circleRectCollision(Circle& c, Rectangle& r)
         float penetrationDepth = circle1.radius + circle2.radius - (circle2.position - circle1.position).norm();
         Eigen::Vector2f normal = (circle2.position - circle1.position).normalized();
         Eigen::Vector2f contactPoint = circle1.position + normal * circle1.radius; // Assume that the collision point is the edge of circle 1.
-        CollisionEvent collision (&obj1, &obj2, penetrationDepth, contactPoint, normal);
+        CollisionEvent collision (&obj1, &obj2, {penetrationDepth}, {contactPoint}, normal);
         return collision;
     }
     if (obj1.type == RECTANGLE && obj2.type == RECTANGLE) {
