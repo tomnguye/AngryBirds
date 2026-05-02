@@ -9,8 +9,100 @@ float wrapAngle(float a) {
     return a;
 }
 
-// Tests if there is a separating axis along axisRect's local axes
-std::optional<CollisionEvent> hasGap(Rectangle& axisRect, Rectangle& otherRect, Eigen::Vector2f centerOffset)
+std::array<Eigen::Vector2f, 4> getVertices(Rectangle& r)
+{
+    float hw = r.dimentions[0] * 0.5f;
+    float hh = r.dimentions[1] * 0.5f;
+    float cosA = cosf(r.rotation);
+    float sinA = sinf(r.rotation);
+    return {{
+        r.position + Eigen::Vector2f{cosA*hw - sinA*hh,  sinA*hw + cosA*hh },
+        r.position + Eigen::Vector2f{-cosA*hw - sinA*hh, -sinA*hw + cosA*hh },
+        r.position + Eigen::Vector2f{-cosA*hw + sinA*hh, -sinA*hw - cosA*hh },
+        r.position + Eigen::Vector2f{cosA*hw + sinA*hh,  sinA*hw - cosA*hh },
+    }};
+}
+
+std::vector<Eigen::Vector2f> clipEdge(
+    Eigen::Vector2f v0, Eigen::Vector2f v1,
+    Eigen::Vector2f planePoint, Eigen::Vector2f planeNormal)
+{
+    std::vector<Eigen::Vector2f> result;
+    float d0 = planeNormal.dot(v0 - planePoint);
+    float d1 = planeNormal.dot(v1 - planePoint);
+
+    if (d0 >= 0 && d1 >= 0) {
+        // Both inside
+        result.push_back(v0);
+        result.push_back(v1);
+    } else if (d0 >= 0 && d1 < 0) {
+        // v0 inside, v1 outside
+        float t = d0 / (d0 - d1);
+        result.push_back(v0);
+        result.push_back(v0 + t * (v1 - v0));
+    } else if (d0 < 0 && d1 >= 0) {
+        // v0 outside, v1 inside
+        float t = d0 / (d0 - d1);
+        result.push_back(v0 + t * (v1 - v0));
+        result.push_back(v1);
+    }
+    // Both outside
+    return result;
+}
+
+Eigen::Vector2f getContactPoint(Rectangle& axisRect, Rectangle& otherRect, Eigen::Vector2f normal)
+{
+    auto vertsA = getVertices(axisRect);
+    auto vertsB = getVertices(otherRect);
+
+    // Find reference face on axisRect
+    int refIdx = 0;
+    float maxDot = -INFINITY;
+    for (int i = 0; i < 4; i++) {
+        Eigen::Vector2f edge = (vertsA[(i+1)%4] - vertsA[i]).normalized();
+        Eigen::Vector2f faceNormal = { edge[1], -edge[0] };
+        float d = faceNormal.dot(normal);
+        if (d > maxDot) { maxDot = d; refIdx = i; }
+    }
+    Eigen::Vector2f refV0 = vertsA[refIdx];
+    Eigen::Vector2f refV1 = vertsA[(refIdx+1)%4];
+    Eigen::Vector2f refEdge = (refV1 - refV0).normalized();
+    Eigen::Vector2f refNormal = { refEdge[1], -refEdge[0] };
+
+    // Find incident face on otherRect
+    int incidentIdx = 0;
+    float minDot = INFINITY;
+    for (int i = 0; i < 4; i++) {
+        float d = normal.dot(vertsB[i]);
+        if (d < minDot) { minDot = d; incidentIdx = i; }
+    }
+    int prev = (incidentIdx + 3) % 4;
+    int next = (incidentIdx + 1) % 4;
+    Eigen::Vector2f edgePrev = (vertsB[incidentIdx] - vertsB[prev]).normalized();
+    Eigen::Vector2f edgeNext = (vertsB[incidentIdx] - vertsB[next]).normalized();
+    int incidentEnd = fabsf(edgePrev.dot(normal)) < fabsf(edgeNext.dot(normal)) ? prev : next;
+
+    Eigen::Vector2f v0 = vertsB[incidentIdx];
+    Eigen::Vector2f v1 = vertsB[incidentEnd];
+
+    // Clip incident edge against side planes of reference face
+    auto clipped = clipEdge(v0, v1, refV0, refEdge);
+    if (clipped.size() < 2) {return (axisRect.position + otherRect.position)/2.0f;}
+    clipped = clipEdge(clipped[0], clipped[1], refV1, -refEdge);
+    if (clipped.size() < 2) {return (axisRect.position + otherRect.position)/2.0f;}
+
+    // Keep only points behind reference face
+    std::vector<Eigen::Vector2f> contacts;
+    for (auto& p : clipped) {
+        if (refNormal.dot(p - refV0) <= 0.01f) {contacts.push_back(p);}
+    }
+
+    if (contacts.empty()) {return (axisRect.position + otherRect.position) / 2.0f;}
+    if (contacts.size() == 1) {return contacts[0];}
+    return (contacts[0] + contacts[1]) / 2.0f;
+}
+
+std::optional<CollisionEvent> testAxes(Rectangle& axisRect, Rectangle& otherRect, Eigen::Vector2f centerOffset)
 {
     float halfDiag = otherRect.dimentions.norm() / 2.0f;
     float baseAngle = atan2f(otherRect.dimentions[1], otherRect.dimentions[0]);
@@ -18,8 +110,8 @@ std::optional<CollisionEvent> hasGap(Rectangle& axisRect, Rectangle& otherRect, 
 
     std::array<float, 4> cornerAngles = {{
          baseAngle,
-         (float) M_PI - baseAngle,
-         (float) M_PI + baseAngle,
+         (float)M_PI - baseAngle,
+         (float)M_PI + baseAngle,
         -baseAngle
     }};
 
@@ -39,25 +131,44 @@ std::optional<CollisionEvent> hasGap(Rectangle& axisRect, Rectangle& otherRect, 
             });
     };
 
-    float extentOtherX = halfDiag * cosf(closestAngle(0)       + relRot);
-    float extentOtherY = halfDiag * cosf(closestAngle(M_PI/2)  + relRot - M_PI/2);
+    float extentOtherX = halfDiag * cosf(closestAngle(0) + relRot);
+    float extentOtherY = halfDiag * cosf(closestAngle(M_PI/2) + relRot - M_PI/2);
 
-    if (fabsf(sepX) > extentX + fabsf(extentOtherX)) return std::nullopt;
-    if (fabsf(sepY) > extentY + fabsf(extentOtherY)) return std::nullopt;
+    float penX = extentX + fabsf(extentOtherX) - fabsf(sepX);
+    float penY = extentY + fabsf(extentOtherY) - fabsf(sepY);
 
-    return std::nullopt;
+    if (penX < 0 || penY < 0) return std::nullopt;
+
+    Eigen::Vector2f normal;
+    float penetration;
+    if (penX < penY) {
+        normal = { cosR, sinR };
+        if (sepX < 0) normal = -normal;
+        penetration = penX;
+    } else {
+        normal = { -sinR, cosR };
+        if (sepY < 0) normal = -normal;
+        penetration = penY;
+    }
+
+    Eigen::Vector2f contact = getContactPoint(axisRect, otherRect, normal);
+    return CollisionEvent(&axisRect, &otherRect, penetration, contact, normal);
 }
-
 // SAT method for collision detection
 std::optional<CollisionEvent> satRectRect(Rectangle& a, Rectangle& b)
 {
     Eigen::Vector2f centerOffset = a.position - b.position;
-    std::optional<CollisionEvent> collisionA = hasGap(b, a, centerOffset);
-    std::optional<CollisionEvent> collisionB = hasGap(a, b, -centerOffset);
 
-    if (!collisionA.has_value()) return std::nullopt;
-    if (!collisionB.has_value()) return std::nullopt;
-    return std::nullopt;
+    auto resultA = testAxes(b, a, centerOffset);
+    auto resultB = testAxes(a, b, -centerOffset);
+
+    if (!resultA.has_value()) return std::nullopt;
+    if (!resultB.has_value()) return std::nullopt;
+
+    // Return the axis with smallest penetration
+    if (resultA->penetrationDepth < resultB->penetrationDepth)
+        return resultA.value();
+    return resultB.value();
 }
 
 std::optional<CollisionEvent> circleRectCollision(Circle& c, Rectangle& r)
@@ -68,7 +179,7 @@ std::optional<CollisionEvent> circleRectCollision(Circle& c, Rectangle& r)
     Eigen::Vector2f offset = c.position - r.position;
 
     // Project circle center onto rect's local axes
-    float localX =  offset[0] * cosR + offset[1] * sinR;
+    float localX = offset[0] * cosR + offset[1] * sinR;
     float localY = -offset[0] * sinR + offset[1] * cosR;
 
     // Clamp to rect's extents
@@ -97,6 +208,7 @@ std::optional<CollisionEvent> circleRectCollision(Circle& c, Rectangle& r)
 }
 
  std::optional<CollisionEvent> check_collision(PhysicsObject& obj1, PhysicsObject& obj2) {
+    if (obj1.stationary && obj2.stationary) {return std::nullopt;}
     if (obj1.type == CIRCLE && obj2.type == CIRCLE) {
         Circle circle1 = static_cast<Circle&>(obj1);
         Circle circle2 = static_cast<Circle&>(obj2);
@@ -107,8 +219,7 @@ std::optional<CollisionEvent> circleRectCollision(Circle& c, Rectangle& r)
         return collision;
     }
     if (obj1.type == RECTANGLE && obj2.type == RECTANGLE) {
-        satRectRect(static_cast<Rectangle&>(obj1), static_cast<Rectangle&>(obj2));
-        return std::nullopt;
+        return satRectRect(static_cast<Rectangle&>(obj1), static_cast<Rectangle&>(obj2));
     }
     if (obj1.type == CIRCLE && obj2.type == RECTANGLE) {
         return circleRectCollision(static_cast<Circle&>(obj1), static_cast<Rectangle&>(obj2));

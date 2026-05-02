@@ -49,28 +49,33 @@ void PhysicsEngine::advanceState() {
         float velAlongNormal = relativeVelocity.dot(normal);
 
         if (velAlongNormal <= 0) { // Check if theyre already moving apart, this is to stop them from stacking velocity by being collided.
+            // 6. Rotation from off-center hits
+            Eigen::Vector2f ra = point - a->position;
+            Eigen::Vector2f rb = point - b->position;
+            
+            float raCrossN = ra.x() * normal.y() - ra.y() * normal.x();
+            float rbCrossN = rb.x() * normal.y() - rb.y() * normal.x();
             float j = -(1 + restitution) * velAlongNormal;
-            j /= a->inv_mass + b->inv_mass;
+            j /= a->inv_mass + b->inv_mass
+            + raCrossN * raCrossN * a->inv_inertia
+            + rbCrossN * rbCrossN * b->inv_inertia;
 
             Eigen::Vector2f impulse = j * normal;
             a->velocity -= impulse * a->inv_mass;
             b->velocity += impulse * b->inv_mass;
 
-            // 6. Rotation from off-center hits
-            Eigen::Vector2f ra = point - a->position;
-            Eigen::Vector2f rb = point - b->position;
-            
             a->angularVelocity += (ra.x() * impulse.y() - ra.y() * impulse.x()) * a->inv_inertia;
-            b->angularVelocity += (rb.x() * impulse.y() - rb.y() * impulse.x()) * b->inv_mass;
+            b->angularVelocity += (rb.x() * impulse.y() - rb.y() * impulse.x()) * b->inv_inertia;
         }
-
-        
     }
 }
 
 void PhysicsEngine::updatePhysics(PhysicsObject& obj)
 {
-    // obj.velocity[1] += g * dt;
+    if (obj.stationary) {
+        return;
+    }
+    obj.velocity[1] += g * dt;
 
     auto f = [](Eigen::Vector2f vNew, const PhysicsObject& obj, const PhysicsEngine& eng) -> Eigen::Vector2f {
         return vNew - obj.velocity + eng.dragCoeff * eng.dt * vNew.norm() * vNew; 

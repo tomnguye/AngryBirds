@@ -17,7 +17,7 @@ endif()
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -march=native  -funroll-loops")
 find_package(OpenCV REQUIRED)
 find_package(Eigen3 REQUIRED)
-find_package(glfw3 REQUIRED)
+# find_package(glfw3 REQUIRED)
 
 include_directories(${EIGEN3_INCLUDE_DIR} ${OpenCV_INCLUDE_DIRS})
 

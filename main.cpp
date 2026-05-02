@@ -109,12 +109,31 @@ int main()
     auto eng = PhysicsEngine();
     std::vector<std::unique_ptr<PhysicsObject>> objs;
 
-    // Circles
-    objs.push_back(std::make_unique<Circle>(0.5f, Eigen::Vector2f{2, 2}, Eigen::Vector2f{0.7f, 0}));
-    // objs.push_back(std::make_unique<Rectangle>(Eigen::Vector2f{1.0f, 0.5f}, Eigen::Vector2f{2, 2}, Eigen::Vector2f{0.4f, 0}, -0.3f)); // 0.3 radians
-    objs.push_back(std::make_unique<Circle>(0.5f, Eigen::Vector2f{4, 4}, Eigen::Vector2f{0, -0.8f}));
+    // A circle fired at a stack of rectangles
+    // objs.push_back(std::make_unique<Circle>(0.4f, Eigen::Vector2f{0.5f, 2.0f}, Eigen::Vector2f{3.5f, 0.5f}));
 
-    objs.push_back(std::make_unique<Rectangle>(Eigen::Vector2f{1.0f, 0.5f}, Eigen::Vector2f{6, 4}, Eigen::Vector2f{-0.2f, -0.4f}, 0.3f)); // 0.3 radians
+    // Stack of rectangles in the middle
+    objs.push_back(std::make_unique<Rectangle>(Eigen::Vector2f{1.5f, 0.3f}, Eigen::Vector2f{5.0f, 0.5f}, Eigen::Vector2f::Zero(), 0.0f));
+    objs.push_back(std::make_unique<Rectangle>(Eigen::Vector2f{1.5f, 0.3f}, Eigen::Vector2f{5.0f, 1.0f}, Eigen::Vector2f::Zero(), 0.0f));
+    objs.push_back(std::make_unique<Rectangle>(Eigen::Vector2f{1.5f, 0.3f}, Eigen::Vector2f{5.0f, 1.5f}, Eigen::Vector2f::Zero(), 0.0f));
+
+    // A second circle coming from above at an angle
+    // objs.push_back(std::make_unique<Circle>(0.3f, Eigen::Vector2f{6.0f, 9.0f}, Eigen::Vector2f{-1.0f, -2.0f}));
+
+    // A spinning rectangle coming from the right
+    // objs.push_back(std::make_unique<Rectangle>(Eigen::Vector2f{1.2f, 0.4f}, Eigen::Vector2f{9.0f, 6.0f}, Eigen::Vector2f{-2.0f, -0.5f}, 0.8f, 1.5f));
+
+    // A slow heavy rectangle drifting across
+    objs.push_back(std::make_unique<Rectangle>(Eigen::Vector2f{0.8f, 0.8f}, Eigen::Vector2f{8.0f, 3.0f}, Eigen::Vector2f{-0.5f, 0.2f}, 0.0f, 0.0f, false, 5.0f));
+
+    // Bottom
+    objs.push_back(std::make_unique<Rectangle>(Eigen::Vector2f{SIM_WIDTH, 0.2f}, Eigen::Vector2f{SIM_WIDTH/2, 0.1f}, Eigen::Vector2f::Zero(), 0, 0, true));
+    // Top
+    objs.push_back(std::make_unique<Rectangle>(Eigen::Vector2f{SIM_WIDTH, 0.2f}, Eigen::Vector2f{SIM_WIDTH/2, SIM_HEIGHT - 0.1f}, Eigen::Vector2f::Zero(), 0, 0, true));
+    // Left
+    objs.push_back(std::make_unique<Rectangle>(Eigen::Vector2f{0.2f, SIM_HEIGHT}, Eigen::Vector2f{0.1f, SIM_HEIGHT/2}, Eigen::Vector2f::Zero(), 0, 0, true));
+    // Right
+    objs.push_back(std::make_unique<Rectangle>(Eigen::Vector2f{0.2f, SIM_HEIGHT}, Eigen::Vector2f{SIM_WIDTH - 0.1f, SIM_HEIGHT/2}, Eigen::Vector2f::Zero(), 0, 0, true));
 
     eng.setState(std::move(objs));
 
