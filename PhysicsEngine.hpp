@@ -16,7 +16,8 @@
 class PhysicsEngine {
     public:
     const int step = 16;
-    const float dt = (float) step / 1000;
+    // const float dt = (float) step / 1000;
+    const float dt = 0.001f;   // slowed down for testing
     const float g = -9.8f;
     float restitution = 0.7f;
     float friction = 0.8f;
@@ -28,6 +29,10 @@ class PhysicsEngine {
     PhysicsEngine() {
         // add config later
     };
+    // to make slingshot work
+    void addObject(std::unique_ptr<PhysicsObject> obj) {
+    objects.push_back(std::move(obj));
+    }
 
     std::vector<CollisionEvent> getCollisions() {
         return colliding_objects(objects);
