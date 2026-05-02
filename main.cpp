@@ -1,13 +1,3 @@
-// main.cpp
-// Compile (Linux):
-//   g++ main.cpp PhysicsEngine.cpp CollisionDetection.cpp \
-//       -lglfw -lGLEW -lGL \
-//       $(pkg-config --cflags eigen3) -o sim
-// Compile (macOS):
-//   g++ main.cpp PhysicsEngine.cpp CollisionDetection.cpp \
-//       -lglfw -lGLEW -framework OpenGL \
-//       $(pkg-config --cflags eigen3) -o sim
-//
 // Controls:
 //   Click + drag the ball to pull the slingshot, release to fire
 //   R       — reset slingshot
@@ -34,10 +24,14 @@ const float SIM_HEIGHT    = 10.0f;
 inline float ndcX(float x) { return (x / SIM_WIDTH)  * 2.0f - 1.0f; }
 inline float ndcY(float y) { return (y / SIM_HEIGHT) * 2.0f - 1.0f; }
 
+
+//physics pause functionality
+static bool g_paused = false;
+
 // =====================================================
 // SLINGSHOT SETTINGS
 // =====================================================
-const Eigen::Vector2f SLING_POS    = { 2.0f, 1.0f };
+const Eigen::Vector2f SLING_POS    = { 2.0f, 3.0f };
 const float           SLING_RADIUS = 0.2f;
 const float           MAX_PULL     = 2.5f;
 const float           LAUNCH_FORCE = 8.0f;
@@ -145,7 +139,7 @@ GLuint buildProgram()
 // =====================================================
 // GEOMETRY HELPERS
 // =====================================================
-void pushCircle(std::vector<float>& verts,
+void drawCircle(std::vector<float>& verts,
                 float cx, float cy, float radius, int segments = 32)
 {
     float nx = ndcX(cx), ny = ndcY(cy);
@@ -160,7 +154,7 @@ void pushCircle(std::vector<float>& verts,
     }
 }
 
-void pushRect(std::vector<float>& verts,
+void drawRect(std::vector<float>& verts,
               float cx, float cy, float hw, float hh, float rotation)
 {
     float cosA = cosf(rotation), sinA = sinf(rotation);
@@ -176,7 +170,7 @@ void pushRect(std::vector<float>& verts,
     verts.insert(verts.end(), {px[0],py[0], px[2],py[2], px[3],py[3]});
 }
 
-void pushLine(std::vector<float>& verts,
+void drawLine(std::vector<float>& verts,
               float x0, float y0, float x1, float y1, float thickness = 0.004f)
 {
     float dx = x1-x0, dy = y1-y0;
@@ -213,8 +207,13 @@ void drawBatch(GLuint vao, GLuint vbo,
 // =====================================================
 // MAIN
 // =====================================================
+static bool pPressedLastFrame = false;
 int main()
 {
+
+   
+
+
     if (!glfwInit()) { std::cerr << "GLFW init failed\n"; return 1; }
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
@@ -227,6 +226,12 @@ int main()
                                           "Physics Sim", nullptr, nullptr);
     if (!window) { std::cerr << "Window creation failed\n"; glfwTerminate(); return 1; }
     glfwMakeContextCurrent(window);
+
+
+    
+
+    // THIS MAKES IT RUN AT SCREEN REFRESH RATE / VSYNC 
+    // WE DONT WANT THIS
     glfwSwapInterval(1);
 
     glewExperimental = GL_TRUE;
@@ -301,6 +306,7 @@ int main()
         }
 
         // Update pull position while dragging
+        // need to fix power and direction
         if (sling.dragging) {
             Eigen::Vector2f m    = mouseToSim(window);
             Eigen::Vector2f pull = m - SLING_POS;
@@ -309,7 +315,20 @@ int main()
             sling.pullPos = SLING_POS + pull;
         }
 
-        eng.advanceState();
+        //pause functionality
+        bool pPressed = glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS;
+
+        if (pPressed && !pPressedLastFrame)
+        {
+            g_paused = !g_paused;
+            std::cout << (g_paused ? "Paused\n" : "Resumed\n");
+        }
+
+        pPressedLastFrame = pPressed;
+
+        if (!g_paused)        {
+            eng.advanceState();
+        }
         auto collisions = eng.getCollisions();
 
         glClearColor(0.047f, 0.047f, 0.047f, 1.0f);
@@ -327,11 +346,11 @@ int main()
         {
             if (obj->type == CIRCLE) {
                 auto* c = static_cast<Circle*>(obj.get());
-                pushCircle(shapeVerts, c->position[0], c->position[1], c->radius);
+                drawCircle(shapeVerts, c->position[0], c->position[1], c->radius);
             }
             else if (obj->type == RECTANGLE) {
                 auto* r = static_cast<Rectangle*>(obj.get());
-                pushRect(shapeVerts,
+                drawRect(shapeVerts,
                          r->position[0], r->position[1],
                          r->dimentions[0] * 0.5f,
                          r->dimentions[1] * 0.5f,
@@ -342,17 +361,17 @@ int main()
         // Slingshot — ball + elastic bands
         if (!sling.launched)
         {
-            pushCircle(shapeVerts, sling.pullPos[0], sling.pullPos[1], SLING_RADIUS);
+            drawCircle(shapeVerts, sling.pullPos[0], sling.pullPos[1], SLING_RADIUS);
 
             // Two fork tips slightly left/right of the anchor
             float forkLX = ndcX(SLING_POS[0] - 0.15f);
             float forkRX = ndcX(SLING_POS[0] + 0.15f);
-            float forkY  = ndcY(SLING_POS[1] + 0.6f);
+            float forkY  = ndcY(SLING_POS[1] + 0.2f);
             float ballX  = ndcX(sling.pullPos[0]);
             float ballY  = ndcY(sling.pullPos[1]);
 
-            pushLine(bandVerts, forkLX, forkY, ballX, ballY, 0.006f);
-            pushLine(bandVerts, forkRX, forkY, ballX, ballY, 0.006f);
+            drawLine(bandVerts, forkLX, forkY, ballX, ballY, 0.006f);
+            drawLine(bandVerts, forkRX, forkY, ballX, ballY, 0.006f);
         }
 
         // Collision debug
@@ -361,11 +380,11 @@ int main()
         {
             float cx = ev.contactPoint[0], cy = ev.contactPoint[1];
             float nx = ev.contactNormal[0], ny = ev.contactNormal[1];
-            pushCircle(contactVerts, cx, cy, 0.08f, 12);
-            pushLine(normalVertsA,
+            drawCircle(contactVerts, cx, cy, 0.08f, 12);
+            drawLine(normalVertsA,
                      ndcX(cx), ndcY(cy),
                      ndcX(cx + nx*arrowLen), ndcY(cy + ny*arrowLen));
-            pushLine(normalVertsB,
+            drawLine(normalVertsB,
                      ndcX(cx), ndcY(cy),
                      ndcX(cx - nx*arrowLen), ndcY(cy - ny*arrowLen));
         }
