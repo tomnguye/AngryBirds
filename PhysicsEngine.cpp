@@ -144,7 +144,7 @@ void PhysicsEngine::advanceState() {
 
     for (auto& obj : objects) {
         obj->velocity *= 0.999;
-        obj->angularVelocity *= 0.995;
+        obj->angularVelocity *= 0.99;
 
         if (obj->sleeping) continue;
         if (obj->velocity.norm() < 0.015f && fabsf(obj->angularVelocity) < 0.015f) {
@@ -183,10 +183,10 @@ void PhysicsEngine::updatePhysics(PhysicsObject& obj)
         obj.velocity -= drag * dt;
     }
 
-    float angSpeed = obj.angularVelocity;
-    if (angSpeed > 1e-6f){
-    float angDrag = dragCoeff * angSpeed * fabs(angSpeed);
-    obj.angularVelocity -= angDrag * dt;}
+    // float angSpeed = obj.angularVelocity;
+    // if (angSpeed > 1e-6f){
+    // float angDrag = dragCoeff * angSpeed * fabs(angSpeed);
+    // obj.angularVelocity -= angDrag * dt;}
 
     obj.position += obj.velocity * dt;
     obj.rotation += obj.angularVelocity * dt;
