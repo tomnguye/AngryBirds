@@ -16,9 +16,9 @@
 // =====================================================
 // WINDOW / SIM SETTINGS
 // =====================================================
-const int   WINDOW_WIDTH  = 600;
+const int   WINDOW_WIDTH  = 1800;
 const int   WINDOW_HEIGHT = 600;
-const float SIM_WIDTH     = 10.0f;
+const float SIM_WIDTH     = 30.0f;
 const float SIM_HEIGHT    = 10.0f;
 
 inline float ndcX(float x) { return (x / SIM_WIDTH)  * 2.0f - 1.0f; }
@@ -31,7 +31,7 @@ static bool g_paused = false;
 // =====================================================
 // SLINGSHOT SETTINGS
 // =====================================================
-const Eigen::Vector2f SLING_POS    = { 2.0f, 3.0f };
+const Eigen::Vector2f SLING_POS    = { 4.0f, 3.0f };
 const float           SLING_RADIUS = 0.2f;
 const float           MAX_PULL     = 2.5f;
 const float           LAUNCH_FORCE = 8.0f;
@@ -125,8 +125,8 @@ GLuint compileShader(GLenum type, const char* src)
 
 GLuint buildProgram()
 {
-    GLuint vs   = compileShader(GL_VERTEX_SHADER,   VERT_SRC);
-    GLuint fs   = compileShader(GL_FRAGMENT_SHADER, FRAG_SRC);
+    GLuint vs = compileShader(GL_VERTEX_SHADER, VERT_SRC);
+    GLuint fs = compileShader(GL_FRAGMENT_SHADER, FRAG_SRC);
     GLuint prog = glCreateProgram();
     glAttachShader(prog, vs);
     glAttachShader(prog, fs);
@@ -249,15 +249,49 @@ int main()
     PhysicsEngine eng;
     std::vector<std::unique_ptr<PhysicsObject>> objs;
 
-    // Stack of rectangles to knock over (moved right to make room for sling)
+    // Stack of rectangles to knock over
     objs.push_back(std::make_unique<Rectangle>(
-        Eigen::Vector2f{1.5f, 0.3f}, Eigen::Vector2f{7.0f, 0.5f},
+        Eigen::Vector2f{1.5f, 0.3f}, Eigen::Vector2f{13.0f, 1.5f},
+        Eigen::Vector2f::Zero(), M_PI/2));
+    
+    objs.push_back(std::make_unique<Rectangle>(
+        Eigen::Vector2f{1.5f, 0.3f}, Eigen::Vector2f{20.0f, 1.0f},
+        Eigen::Vector2f::Zero(), M_PI/2));
+    objs.push_back(std::make_unique<Rectangle>(
+        Eigen::Vector2f{1.5f, 0.3f}, Eigen::Vector2f{21.0f, 1.0f},
+        Eigen::Vector2f::Zero(), M_PI/2));
+    objs.push_back(std::make_unique<Rectangle>(
+        Eigen::Vector2f{1.5f, 0.3f}, Eigen::Vector2f{22.0f, 1.0f},
+        Eigen::Vector2f::Zero(), M_PI/2));
+    objs.push_back(std::make_unique<Rectangle>(
+        Eigen::Vector2f{1.5f, 0.3f}, Eigen::Vector2f{23.0f, 1.0f},
+        Eigen::Vector2f::Zero(), M_PI/2));
+
+    objs.push_back(std::make_unique<Rectangle>(
+        Eigen::Vector2f{1.5f, 0.3f}, Eigen::Vector2f{20.5f, 1.5f},
         Eigen::Vector2f::Zero(), 0.0f));
     objs.push_back(std::make_unique<Rectangle>(
-        Eigen::Vector2f{1.5f, 0.3f}, Eigen::Vector2f{7.0f, 1.0f},
+        Eigen::Vector2f{1.5f, 0.3f}, Eigen::Vector2f{22.5f, 1.5f},
+        Eigen::Vector2f::Zero(), 0.0f));
+
+    objs.push_back(std::make_unique<Rectangle>(
+        Eigen::Vector2f{1.5f, 0.3f}, Eigen::Vector2f{20.0f, 3.0f},
+        Eigen::Vector2f::Zero(), M_PI/2));
+    objs.push_back(std::make_unique<Rectangle>(
+        Eigen::Vector2f{1.5f, 0.3f}, Eigen::Vector2f{21.0f, 3.0f},
+        Eigen::Vector2f::Zero(), M_PI/2));
+    objs.push_back(std::make_unique<Rectangle>(
+        Eigen::Vector2f{1.5f, 0.3f}, Eigen::Vector2f{22.0f, 3.0f},
+        Eigen::Vector2f::Zero(), M_PI/2));
+    objs.push_back(std::make_unique<Rectangle>(
+        Eigen::Vector2f{1.5f, 0.3f}, Eigen::Vector2f{23.0f, 3.0f},
+        Eigen::Vector2f::Zero(), M_PI/2));
+
+    objs.push_back(std::make_unique<Rectangle>(
+        Eigen::Vector2f{1.5f, 0.3f}, Eigen::Vector2f{20.5f, 4.5f},
         Eigen::Vector2f::Zero(), 0.0f));
     objs.push_back(std::make_unique<Rectangle>(
-        Eigen::Vector2f{1.5f, 0.3f}, Eigen::Vector2f{7.0f, 1.5f},
+        Eigen::Vector2f{1.5f, 0.3f}, Eigen::Vector2f{22.5f, 4.5f},
         Eigen::Vector2f::Zero(), 0.0f));
 
     // Boundary walls
