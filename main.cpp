@@ -2,6 +2,7 @@
 //   Click + drag the ball to pull the slingshot, release to fire
 //   R       — reset slingshot
 //   Q / Esc — quit
+//   T       — reset entire scene
 
 #include <iostream>
 #include <vector>
@@ -23,10 +24,6 @@ const float SIM_HEIGHT    = 10.0f;
 
 inline float ndcX(float x) { return (x / SIM_WIDTH)  * 2.0f - 1.0f; }
 inline float ndcY(float y) { return (y / SIM_HEIGHT) * 2.0f - 1.0f; }
-
-
-//physics pause functionality
-static bool g_paused = false;
 
 // =====================================================
 // SLINGSHOT SETTINGS
@@ -204,49 +201,9 @@ void drawBatch(GLuint vao, GLuint vbo,
     glDrawArrays(GL_TRIANGLES, 0, (GLsizei)(verts.size() / 2));
 }
 
-// =====================================================
-// MAIN
-// =====================================================
-static bool pPressedLastFrame = false;
-int main()
+// draw initial scene
+std::vector<std::unique_ptr<PhysicsObject>> createInitialState()
 {
-
-   
-
-
-    if (!glfwInit()) { std::cerr << "GLFW init failed\n"; return 1; }
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-#ifdef __APPLE__
-    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-#endif
-
-    GLFWwindow* window = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT,
-                                          "Physics Sim", nullptr, nullptr);
-    if (!window) { std::cerr << "Window creation failed\n"; glfwTerminate(); return 1; }
-    glfwMakeContextCurrent(window);
-
-
-    
-
-    // THIS MAKES IT RUN AT SCREEN REFRESH RATE / VSYNC 
-    // WE DONT WANT THIS
-    glfwSwapInterval(1);
-
-    glewExperimental = GL_TRUE;
-    if (glewInit() != GLEW_OK) { std::cerr << "GLEW init failed\n"; return 1; }
-    glViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
-
-    GLuint prog = buildProgram();
-    glUseProgram(prog);
-
-    GLuint vao, vbo;
-    glGenVertexArrays(1, &vao);
-    glGenBuffers(1, &vbo);
-
-    // --- Scene ---
-    PhysicsEngine eng;
     std::vector<std::unique_ptr<PhysicsObject>> objs;
 
     // Stack of rectangles to knock over
@@ -294,7 +251,7 @@ int main()
         Eigen::Vector2f{1.5f, 0.3f}, Eigen::Vector2f{22.5f, 4.5f},
         Eigen::Vector2f::Zero(), 0.0f));
 
-    // Boundary walls
+     // Boundary walls
     objs.push_back(std::make_unique<Rectangle>(
         Eigen::Vector2f{SIM_WIDTH, 0.2f},
         Eigen::Vector2f{SIM_WIDTH/2, 0.1f},
@@ -312,7 +269,56 @@ int main()
         Eigen::Vector2f{SIM_WIDTH - 0.1f, SIM_HEIGHT/2},
         Eigen::Vector2f::Zero(), 0, 0, true));
 
-    eng.setState(std::move(objs));
+    return objs;
+}
+    
+
+// =====================================================
+// MAIN
+// =====================================================
+static bool pPressedLastFrame = false;
+int main()
+{
+
+   
+
+
+    if (!glfwInit()) { std::cerr << "GLFW init failed\n"; return 1; }
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+#ifdef __APPLE__
+    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+#endif
+
+    GLFWwindow* window = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT,
+                                          "Physics Sim", nullptr, nullptr);
+    if (!window) { std::cerr << "Window creation failed\n"; glfwTerminate(); return 1; }
+    glfwMakeContextCurrent(window);
+
+
+    
+
+    // run at screen refresh rate 
+    glfwSwapInterval(1);
+
+    glewExperimental = GL_TRUE;
+    if (glewInit() != GLEW_OK) { std::cerr << "GLEW init failed\n"; return 1; }
+    glViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
+
+    GLuint prog = buildProgram();
+    glUseProgram(prog);
+
+    GLuint vao, vbo;
+    glGenVertexArrays(1, &vao);
+    glGenBuffers(1, &vbo);
+
+    // --- Scene ---
+    PhysicsEngine eng;
+    // std::vector<std::unique_ptr<PhysicsObject>> objs;
+    // eng.setState(std::move(objs));
+
+    eng.setState(createInitialState());
 
     // --- Slingshot ---
     Slingshot sling;
@@ -366,6 +372,7 @@ int main()
         }
 
         //pause functionality
+        static bool g_paused = false;
         bool pPressed = glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS;
 
         if (pPressed && !pPressedLastFrame)
@@ -382,6 +389,33 @@ int main()
                 accumulator -= fixedDt;
             }
         }
+
+        // reset functionality
+        bool tPressed = glfwGetKey(window, GLFW_KEY_T) == GLFW_PRESS;
+        static bool tPressedLast = false;
+
+        if (tPressed && !tPressedLast)
+        {
+            eng.setState(createInitialState());
+
+            // reset slingshot
+            sling.launched = false;
+            sling.dragging = false;
+            sling.pullPos  = SLING_POS;
+
+            // reset timing
+            accumulator = 0.0;
+
+            // optional: unpause
+            g_paused = false;
+
+            std::cout << "Game Reset\n";
+        }
+
+        tPressedLast = tPressed;
+
+
+
         auto collisions = eng.getCollisions();
 
         glClearColor(0.047f, 0.047f, 0.047f, 1.0f);
