@@ -47,7 +47,7 @@ void PhysicsEngine::advanceState() {
                 Eigen::Vector2f rbPerp = {-b->angularVelocity * rb.y(), b->angularVelocity * rb.x()};
                 Eigen::Vector2f relVel = (b->velocity + rbPerp) - (a->velocity + raPerp);
                 float van = relVel.dot(normal);
-                float e = (fabsf(van) < 0.5f) ? 0.0f : restitution;
+                float e = (fabsf(van) < 0.2f) ? 0.0f : restitution;
                 targets[ci].targetVel = -e * van;
             }
         }
@@ -107,7 +107,7 @@ void PhysicsEngine::advanceState() {
                 float vt = relVelAfter.dot(tangent);
                 float jtRaw = -vt / kTangent;
 
-                float maxFriction = 0.55f * impulses[ci].normal;
+                float maxFriction = 0.3f * impulses[ci].normal;
                 float oldFriction = impulses[ci].friction;
                 impulses[ci].friction = std::clamp(oldFriction + jtRaw, -maxFriction, maxFriction);
                 float jtDelta = impulses[ci].friction - oldFriction;
@@ -131,7 +131,7 @@ void PhysicsEngine::advanceState() {
             maxDepth = std::max(maxDepth, d);
 
         float percent = 0.4f;
-        float slop = 0.001f;
+        float slop = 0.01f;
         float depth = std::max(maxDepth - slop, 0.0f);
 
         Eigen::Vector2f correction = percent * depth * normal / (a->inv_mass + b->inv_mass);
@@ -141,20 +141,23 @@ void PhysicsEngine::advanceState() {
 
     for (auto& obj : objects) {
         obj->velocity *= 0.999;
-        obj->angularVelocity *= 0.999;
+        obj->angularVelocity *= 0.995;
 
         if (obj->sleeping) continue;
-        if (obj->velocity.norm() < 0.01f && fabsf(obj->angularVelocity) < 0.01f) {
+        if (obj->velocity.norm() < 0.015f && fabsf(obj->angularVelocity) < 0.015f) {
             obj->sleepTimer++;
-            if (obj->sleepTimer > 30) {
-                obj->velocity = Eigen::Vector2f::Zero();
-                obj->angularVelocity = 0.0f;
-                obj->sleeping = true;
-                obj->sleepTimer = 0;
-            }
+            obj->velocity = Eigen::Vector2f::Zero();
+            obj->angularVelocity = 0.0f;
+            obj->sleeping = true;
+            obj->sleepTimer = 0;
         } else {
             obj->sleepTimer = 0;
         }
+        // if (obj->sleeping) {
+        //     float halfPi = M_PI / 2.0f;
+        //     float rounded = std::round(obj->rotation / halfPi) * halfPi;
+        //     if (fabsf(obj->rotation - rounded) < 0.01f) obj->rotation = rounded;
+        // }
     }
 }
 
@@ -164,9 +167,14 @@ void PhysicsEngine::updatePhysics(PhysicsObject& obj)
         return;
     }
 
+    float speed = obj.velocity.norm();
+    if (speed > this->maxVelocity) {
+        obj.velocity = obj.velocity.normalized() * this->maxVelocity;
+    }
+
     obj.velocity += Eigen::Vector2f(0.0f, g * dt);
 
-    float speed = obj.velocity.norm();
+    speed = obj.velocity.norm();
     if (speed > 1e-6f) {
         Eigen::Vector2f drag = dragCoeff * speed * obj.velocity;
         obj.velocity -= drag * dt;

@@ -10,7 +10,7 @@ include_directories(/opt/homebrew/include/eigen3) # Apple Silicon Mac (M1/M2/M3)
 
 set(CMAKE_CXX_STANDARD 17)
 if(NOT CMAKE_BUILD_TYPE)
-  set(CMAKE_BUILD_TYPE Debug)
+  set(CMAKE_BUILD_TYPE Release)
 endif()
 
 # Optimization flags

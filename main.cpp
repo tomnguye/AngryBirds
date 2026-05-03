@@ -8,6 +8,7 @@
 #include <vector>
 #include <cmath>
 #include <Eigen/Dense>
+#include <cstdio>
 
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
@@ -17,10 +18,10 @@
 // =====================================================
 // WINDOW / SIM SETTINGS
 // =====================================================
-const int   WINDOW_WIDTH  = 1800;
-const int   WINDOW_HEIGHT = 600;
-const float SIM_WIDTH     = 30.0f;
-const float SIM_HEIGHT    = 10.0f;
+const int   WINDOW_WIDTH  = 1600;
+const int   WINDOW_HEIGHT = 900;
+const float SIM_WIDTH     = 20.0f;
+const float SIM_HEIGHT    = SIM_WIDTH * 9.0f /16.0f;
 
 inline float ndcX(float x) { return (x / SIM_WIDTH)  * 2.0f - 1.0f; }
 inline float ndcY(float y) { return (y / SIM_HEIGHT) * 2.0f - 1.0f; }
@@ -210,67 +211,71 @@ std::vector<std::unique_ptr<PhysicsObject>> createInitialState()
 {
     std::vector<std::unique_ptr<PhysicsObject>> objs;
 
-    // Stack of rectangles to knock over
+    // Solo block
     objs.push_back(std::make_unique<Rectangle>(
-        Eigen::Vector2f{1.5f, 0.3f}, Eigen::Vector2f{13.0f, 1.5f},
-        Eigen::Vector2f::Zero(), M_PI/2));
-    
-    objs.push_back(std::make_unique<Rectangle>(
-        Eigen::Vector2f{1.5f, 0.3f}, Eigen::Vector2f{20.0f, 1.0f},
-        Eigen::Vector2f::Zero(), M_PI/2));
-    objs.push_back(std::make_unique<Rectangle>(
-        Eigen::Vector2f{1.5f, 0.3f}, Eigen::Vector2f{21.0f, 1.0f},
-        Eigen::Vector2f::Zero(), M_PI/2));
-    objs.push_back(std::make_unique<Rectangle>(
-        Eigen::Vector2f{1.5f, 0.3f}, Eigen::Vector2f{22.0f, 1.0f},
-        Eigen::Vector2f::Zero(), M_PI/2));
-    objs.push_back(std::make_unique<Rectangle>(
-        Eigen::Vector2f{1.5f, 0.3f}, Eigen::Vector2f{23.0f, 1.0f},
+        Eigen::Vector2f{1.5f, 0.3f}, Eigen::Vector2f{8.0f, 1.5f},
         Eigen::Vector2f::Zero(), M_PI/2));
 
+    // Main tower - bottom pillars
     objs.push_back(std::make_unique<Rectangle>(
-        Eigen::Vector2f{1.5f, 0.3f}, Eigen::Vector2f{20.5f, 1.5f},
-        Eigen::Vector2f::Zero(), 0.0f));
-    objs.push_back(std::make_unique<Rectangle>(
-        Eigen::Vector2f{1.5f, 0.3f}, Eigen::Vector2f{22.5f, 1.5f},
-        Eigen::Vector2f::Zero(), 0.0f));
-
-    objs.push_back(std::make_unique<Rectangle>(
-        Eigen::Vector2f{1.5f, 0.3f}, Eigen::Vector2f{20.0f, 3.0f},
+        Eigen::Vector2f{1.5f, 0.3f}, Eigen::Vector2f{10.0f, 1.0f},
         Eigen::Vector2f::Zero(), M_PI/2));
     objs.push_back(std::make_unique<Rectangle>(
-        Eigen::Vector2f{1.5f, 0.3f}, Eigen::Vector2f{21.0f, 3.0f},
+        Eigen::Vector2f{1.5f, 0.3f}, Eigen::Vector2f{11.0f, 1.0f},
         Eigen::Vector2f::Zero(), M_PI/2));
     objs.push_back(std::make_unique<Rectangle>(
-        Eigen::Vector2f{1.5f, 0.3f}, Eigen::Vector2f{22.0f, 3.0f},
+        Eigen::Vector2f{1.5f, 0.3f}, Eigen::Vector2f{12.0f, 1.0f},
         Eigen::Vector2f::Zero(), M_PI/2));
     objs.push_back(std::make_unique<Rectangle>(
-        Eigen::Vector2f{1.5f, 0.3f}, Eigen::Vector2f{23.0f, 3.0f},
+        Eigen::Vector2f{1.5f, 0.3f}, Eigen::Vector2f{13.0f, 1.0f},
         Eigen::Vector2f::Zero(), M_PI/2));
 
+    // Bottom crossbeams
     objs.push_back(std::make_unique<Rectangle>(
-        Eigen::Vector2f{1.5f, 0.3f}, Eigen::Vector2f{20.5f, 4.5f},
+        Eigen::Vector2f{1.5f, 0.3f}, Eigen::Vector2f{10.5f, 1.5f},
         Eigen::Vector2f::Zero(), 0.0f));
     objs.push_back(std::make_unique<Rectangle>(
-        Eigen::Vector2f{1.5f, 0.3f}, Eigen::Vector2f{22.5f, 4.5f},
+        Eigen::Vector2f{1.5f, 0.3f}, Eigen::Vector2f{12.5f, 1.5f},
         Eigen::Vector2f::Zero(), 0.0f));
 
-     // Boundary walls
+    // Middle pillars
     objs.push_back(std::make_unique<Rectangle>(
-        Eigen::Vector2f{SIM_WIDTH, 0.2f},
-        Eigen::Vector2f{SIM_WIDTH/2, 0.1f},
+        Eigen::Vector2f{1.5f, 0.3f}, Eigen::Vector2f{10.0f, 3.0f},
+        Eigen::Vector2f::Zero(), M_PI/2));
+    objs.push_back(std::make_unique<Rectangle>(
+        Eigen::Vector2f{1.5f, 0.3f}, Eigen::Vector2f{11.0f, 3.0f},
+        Eigen::Vector2f::Zero(), M_PI/2));
+    objs.push_back(std::make_unique<Rectangle>(
+        Eigen::Vector2f{1.5f, 0.3f}, Eigen::Vector2f{12.0f, 3.0f},
+        Eigen::Vector2f::Zero(), M_PI/2));
+    objs.push_back(std::make_unique<Rectangle>(
+        Eigen::Vector2f{1.5f, 0.3f}, Eigen::Vector2f{13.0f, 3.0f},
+        Eigen::Vector2f::Zero(), M_PI/2));
+
+    // Top crossbeams
+    objs.push_back(std::make_unique<Rectangle>(
+        Eigen::Vector2f{1.5f, 0.3f}, Eigen::Vector2f{10.5f, 4.5f},
+        Eigen::Vector2f::Zero(), 0.0f));
+    objs.push_back(std::make_unique<Rectangle>(
+        Eigen::Vector2f{1.5f, 0.3f}, Eigen::Vector2f{12.5f, 4.5f},
+        Eigen::Vector2f::Zero(), 0.0f));
+
+    // Boundary walls
+    objs.push_back(std::make_unique<Rectangle>(
+        Eigen::Vector2f{SIM_WIDTH, 2.0f},
+        Eigen::Vector2f{SIM_WIDTH/2, -0.9f},
         Eigen::Vector2f::Zero(), 0, 0, true, 10, true));
     objs.push_back(std::make_unique<Rectangle>(
-        Eigen::Vector2f{SIM_WIDTH, 0.2f},
-        Eigen::Vector2f{SIM_WIDTH/2, SIM_HEIGHT - 0.1f},
+        Eigen::Vector2f{SIM_WIDTH, 2.0f},
+        Eigen::Vector2f{SIM_WIDTH/2, SIM_HEIGHT + 0.9f},
         Eigen::Vector2f::Zero(), 0, 0, true, 10, true));
     objs.push_back(std::make_unique<Rectangle>(
-        Eigen::Vector2f{0.2f, SIM_HEIGHT},
-        Eigen::Vector2f{0.1f, SIM_HEIGHT/2},
+        Eigen::Vector2f{2.0f, SIM_HEIGHT},
+        Eigen::Vector2f{-0.9f, SIM_HEIGHT/2},
         Eigen::Vector2f::Zero(), 0, 0, true, 10, true));
     objs.push_back(std::make_unique<Rectangle>(
-        Eigen::Vector2f{0.2f, SIM_HEIGHT},
-        Eigen::Vector2f{SIM_WIDTH - 0.1f, SIM_HEIGHT/2},
+        Eigen::Vector2f{2.0f, SIM_HEIGHT},
+        Eigen::Vector2f{SIM_WIDTH + 0.9f, SIM_HEIGHT/2},
         Eigen::Vector2f::Zero(), 0, 0, true, 10, true));
 
     return objs;
@@ -337,7 +342,18 @@ int main()
     double lastTime = glfwGetTime();
     double accumulator = 0.0;
 
-    const double fixedDt = 1.0 / 60.0; // 60 Hz physics
+    // static FILE* ffmpeg = nullptr;
+    //     if (!ffmpeg) {
+    //         ffmpeg = popen(
+    //             "ffmpeg -y -f rawvideo -pixel_format rgb24 "
+    //             "-video_size 1600x900 -framerate 60 "
+    //             "-i pipe:0 -vcodec libx264 ../output.mp4",
+    //             "w"
+    //         );
+    //     }
+    // const double recordInterval = 1.0 / 60.0; // match ffmpeg -framerate
+    // double recordAccumulator = 0.0;
+
     while (!glfwWindowShouldClose(window))
     {  
 
@@ -345,7 +361,6 @@ int main()
         double frameTime = currentTime - lastTime;
         lastTime = currentTime;
 
-        // avoid spiral of death
         if (frameTime > 0.25)
             frameTime = 0.25;
 
@@ -399,9 +414,9 @@ int main()
         pPressedLastFrame = pPressed;
 
         if (!g_paused) {
-            while (accumulator >= fixedDt) {
+            while (accumulator >= eng.dt) {
                 eng.advanceState();
-                accumulator -= fixedDt;
+                accumulator -= eng.dt;
             }
         }
 
@@ -444,6 +459,7 @@ int main()
         std::vector<float> contactVerts;
         std::vector<float> normalVertsA;
         std::vector<float> normalVertsB;
+        std::vector<float> eyeVerts;
 
         // Physics objects
         for (const auto& obj : eng.getState())
@@ -454,13 +470,15 @@ int main()
 
                 float cx = c->position[0];
                 float cy = c->position[1];
-
                 float angle = c->rotation;
 
-                float mx = cx + cosf(angle) * c->radius;
-                float my = cy + sinf(angle) * c->radius;
+                // pull it inward so it doesn't poke out
+                float dotRadius = c->radius * 0.3f;
+                float offset = c->radius - dotRadius;
+                float mx = cx + cosf(angle) * offset;
+                float my = cy + sinf(angle) * offset;
 
-                drawCircle(birdVerts, mx, my, 0.05f);
+                drawCircle(eyeVerts, mx, my, dotRadius);
             }
             else if (obj->type == RECTANGLE) {
                 auto* r = static_cast<Rectangle*>(obj.get());
@@ -517,6 +535,7 @@ int main()
 
         // drawBatch(vao, vbo, shapeVerts,   prog, 0.0f, 0.863f, 1.0f); // cyan   — objects
         drawBatch(vao, vbo, birdVerts,  prog, 0.9f, 0.2f, 0.2f); // birds (red)
+        drawBatch(vao, vbo, eyeVerts,  prog, 0.2f, 0.4f, 0.9f); // blue eye
         drawBatch(vao, vbo, blockVerts, prog, 0.6f, 0.4f, 0.2f); // blocks (brown)
         drawBatch(vao, vbo, groundVerts, prog, 0.2f, 0.7f, 0.2f);// ground (green)
         drawBatch(vao, vbo, bandVerts,    prog, 0.9f, 0.7f,   0.2f); // yellow — elastic bands
@@ -525,6 +544,41 @@ int main()
         drawBatch(vao, vbo, normalVertsB, prog, 0.0f, 0.0f,   1.0f); // blue   — normal B
 
         glfwSwapBuffers(window);
+
+        
+
+        // The following is code for recording the videos and capturing screenshots.
+
+        // recordAccumulator += frameTime;
+        // if (recordAccumulator >= recordInterval) {
+        //     recordAccumulator -= recordInterval;
+
+        //     std::vector<uint8_t> pixels(WINDOW_WIDTH * WINDOW_HEIGHT * 3);
+        //     glReadPixels(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT, GL_RGB, GL_UNSIGNED_BYTE, pixels.data());
+        //     for (int y = 0; y < WINDOW_HEIGHT / 2; y++) {
+        //         int opp = WINDOW_HEIGHT - 1 - y;
+        //         std::swap_ranges(
+        //             pixels.begin() + y       * WINDOW_WIDTH * 3,
+        //             pixels.begin() + (y + 1) * WINDOW_WIDTH * 3,
+        //             pixels.begin() + opp     * WINDOW_WIDTH * 3
+        //         );
+        //     }
+        //     fwrite(pixels.data(), 1, pixels.size(), ffmpeg);
+            
+
+        //     static int frameNum = 0;
+        //     if (frameNum % 30 == 0) {
+        //         char cmd[256];
+        //         snprintf(cmd, sizeof(cmd),
+        //             "ffmpeg -y -f rawvideo -pixel_format rgb24 -video_size 1600x900 -i pipe:0 ../frames/frame_%05d.png",
+        //             frameNum / 60);
+        //         FILE* png = popen(cmd, "w");
+        //         fwrite(pixels.data(), 1, pixels.size(), png);
+        //         pclose(png);
+        //     }
+        //     frameNum++;
+        //     lastTime = glfwGetTime();
+        // }
     }
 
     glDeleteVertexArrays(1, &vao);
@@ -532,5 +586,6 @@ int main()
     glDeleteProgram(prog);
     glfwDestroyWindow(window);
     glfwTerminate();
+    // if (ffmpeg) pclose(ffmpeg);
     return 0;
 }

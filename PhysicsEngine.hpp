@@ -17,8 +17,7 @@
 
 class PhysicsEngine {
     public:
-    const int step = 16;
-    const float dt = (float) step / 1000;
+    const float dt = (float) 1.0f / 60.0f;
     // const float dt = 0.001f;   // slowed down for testing
     const float g = -9.8f;
     float restitution = 0.5f;
@@ -26,7 +25,8 @@ class PhysicsEngine {
     float dragCoeff = 0.02f;
     float tolerance = 0.0001;
     float epsilon = 0.0001;
-    int maxIterations = 100;
+    int maxIterations = 5000;
+    float maxVelocity = 15;
 
     PhysicsEngine() {
         // add config later
