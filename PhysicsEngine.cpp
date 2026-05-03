@@ -3,21 +3,6 @@
 #include "CollisionDetection.hpp"
 #include <stdio.h>
 
-// std::optional<Eigen::Vector2f> PhysicsEngine::newtonsMethod(PhysicsObject& obj, Eigen::Vector2f (*f)(Eigen::Vector2f, const PhysicsObject&, const PhysicsEngine&), Eigen::Matrix2f (*fPrime)(Eigen::Vector2f, const PhysicsEngine&)) {
-//     Eigen::Vector2f y, x1;
-//     Eigen::Matrix2f yPrime;
-//     Eigen::Vector2f x0 = obj.velocity;
-//     for (int _ = 0; _ < maxIterations; _++) {
-//         y = f(x0, obj, *this);
-//         yPrime = fPrime(x0, *this);
-//         if (yPrime.norm() < epsilon) {break;}
-//         x1 = x0 - yPrime.inverse() * y;
-//         if ((x1 - x0).norm() <= tolerance) { return x1;}
-//         x0 = x1;
-//     }
-//     return std::nullopt;
-// }
-
 int PhysicsEngine::setState(std::vector<std::unique_ptr<PhysicsObject>> objs) {
     objects = std::move(objs);
     return 0;
@@ -34,16 +19,39 @@ void PhysicsEngine::advanceState() {
 
     auto c = colliding_objects(objects);
     for (auto& event : c) {
-            PhysicsObject* a = event.objA;
-            PhysicsObject* b = event.objB;
-            a->sleeping = false;
-            b->sleeping = false;
+        PhysicsObject* a = event.objA;
+        PhysicsObject* b = event.objB;
+        a->sleeping = false;
+        b->sleeping = false;
     }
 
     struct ContactImpulse { float normal = 0.f; float friction = 0.f; };
     int totalContacts = 0;
     for (auto& e : c) totalContacts += e.contactPoints.size();
     std::vector<ContactImpulse> impulses(totalContacts);
+
+    // Compute target velocities before iteration loop
+    struct ContactTarget { float targetVel = 0.f; };
+    std::vector<ContactTarget> targets(totalContacts);
+    {
+        int ci = 0;
+        for (auto& event : c) {
+            PhysicsObject* a = event.objA;
+            PhysicsObject* b = event.objB;
+            Eigen::Vector2f normal = event.contactNormal;
+            for (int i = 0; i < (int)event.contactPoints.size(); i++, ci++) {
+                Eigen::Vector2f point = event.contactPoints[i];
+                Eigen::Vector2f ra = point - a->position;
+                Eigen::Vector2f rb = point - b->position;
+                Eigen::Vector2f raPerp = {-a->angularVelocity * ra.y(), a->angularVelocity * ra.x()};
+                Eigen::Vector2f rbPerp = {-b->angularVelocity * rb.y(), b->angularVelocity * rb.x()};
+                Eigen::Vector2f relVel = (b->velocity + rbPerp) - (a->velocity + raPerp);
+                float van = relVel.dot(normal);
+                float e = (fabsf(van) < 0.5f) ? 0.0f : restitution;
+                targets[ci].targetVel = -e * van;
+            }
+        }
+    }
 
     for (int j = 0; j < maxIterations; j++) {
         int ci = 0;
@@ -69,8 +77,7 @@ void PhysicsEngine::advanceState() {
                     + raCrossN * raCrossN * a->inv_inertia
                     + rbCrossN * rbCrossN * b->inv_inertia;
 
-                float e = (relativeVelocity.norm() < 0.5f) ? 0.0f : restitution;
-                float jRaw = -(1.0f + e) * velAlongNormal / effMass;
+                float jRaw = (-velAlongNormal + targets[ci].targetVel) / effMass;
 
                 float oldNormal = impulses[ci].normal;
                 impulses[ci].normal = std::max(oldNormal + jRaw, 0.0f);
@@ -113,6 +120,7 @@ void PhysicsEngine::advanceState() {
             }
         }
     }
+
     for (auto& event: c) {
         PhysicsObject* a = event.objA;
         PhysicsObject* b = event.objB;
@@ -137,21 +145,17 @@ void PhysicsEngine::advanceState() {
 
         if (obj->sleeping) continue;
         if (obj->velocity.norm() < 0.01f && fabsf(obj->angularVelocity) < 0.01f) {
-            obj->velocity = Eigen::Vector2f::Zero();
-            obj->angularVelocity = 0.0f;
             obj->sleepTimer++;
-            obj->sleeping = true;
+            if (obj->sleepTimer > 30) {
+                obj->velocity = Eigen::Vector2f::Zero();
+                obj->angularVelocity = 0.0f;
+                obj->sleeping = true;
+                obj->sleepTimer = 0;
+            }
         } else {
             obj->sleepTimer = 0;
         }
-        if (obj->sleepTimer > 30) {
-            obj->velocity = Eigen::Vector2f::Zero();
-            obj->angularVelocity = 0.0f;
-            obj->sleeping = true;
-            obj->sleepTimer = 0;
-        }
     }
-
 }
 
 void PhysicsEngine::updatePhysics(PhysicsObject& obj)
