@@ -44,6 +44,10 @@ static GLFWwindow*    g_window = nullptr;
 static PhysicsEngine* g_eng    = nullptr;
 static Slingshot*     g_sling  = nullptr;
 
+// pause functionality
+static bool g_paused = false;
+
+
 // =====================================================
 // COORDINATE HELPERS
 // =====================================================
@@ -345,7 +349,14 @@ int main()
         if (frameTime > 0.25)
             frameTime = 0.25;
 
-        accumulator += frameTime;
+        // accumulator += frameTime;
+        if (!g_paused){
+            accumulator += frameTime;
+        }
+        else{
+            // freeze time while paused
+            lastTime = currentTime;
+        }
 
 
         glfwPollEvents();
@@ -378,6 +389,10 @@ int main()
         if (pPressed && !pPressedLastFrame)
         {
             g_paused = !g_paused;
+
+            accumulator = 0.0;
+            lastTime = glfwGetTime(); // prevents time jump
+
             std::cout << (g_paused ? "Paused\n" : "Resumed\n");
         }
 
