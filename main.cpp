@@ -324,8 +324,24 @@ int main()
     // =====================================================
     // MAIN LOOP
     // =====================================================
+    double lastTime = glfwGetTime();
+    double accumulator = 0.0;
+
+    const double fixedDt = 1.0 / 60.0; // 60 Hz physics
     while (!glfwWindowShouldClose(window))
-    {
+    {  
+
+        double currentTime = glfwGetTime();
+        double frameTime = currentTime - lastTime;
+        lastTime = currentTime;
+
+        // avoid spiral of death
+        if (frameTime > 0.25)
+            frameTime = 0.25;
+
+        accumulator += frameTime;
+
+
         glfwPollEvents();
 
         if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS ||
@@ -360,8 +376,11 @@ int main()
 
         pPressedLastFrame = pPressed;
 
-        if (!g_paused)        {
-            eng.advanceState();
+        if (!g_paused) {
+            while (accumulator >= fixedDt) {
+                eng.advanceState();
+                accumulator -= fixedDt;
+            }
         }
         auto collisions = eng.getCollisions();
 

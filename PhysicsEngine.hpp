@@ -12,6 +12,8 @@
 #include "PhysicsObject.hpp"
 #include "CollisionEvent.hpp"
 #include "CollisionDetection.hpp"
+#include <unordered_set>
+
 
 class PhysicsEngine {
     public:
@@ -19,7 +21,7 @@ class PhysicsEngine {
     const float dt = (float) step / 1000;
     // const float dt = 0.001f;   // slowed down for testing
     const float g = -9.8f;
-    float restitution = 0.5f;
+    float restitution = 0.3f;
     float friction = 0.8f;
     float dragCoeff = 0.02f;
     float tolerance = 0.0001;
@@ -38,6 +40,9 @@ class PhysicsEngine {
         return colliding_objects(objects);
     }
 
+    float massAbove(PhysicsObject* obj, 
+                                const std::vector<CollisionEvent>& contacts, 
+                                std::unordered_set<PhysicsObject*>& visited);
     void advanceState();
     void updatePhysics(PhysicsObject& obj);
     int setState(std::vector<std::unique_ptr<PhysicsObject>>);
