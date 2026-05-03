@@ -259,19 +259,19 @@ std::vector<std::unique_ptr<PhysicsObject>> createInitialState()
     objs.push_back(std::make_unique<Rectangle>(
         Eigen::Vector2f{SIM_WIDTH, 0.2f},
         Eigen::Vector2f{SIM_WIDTH/2, 0.1f},
-        Eigen::Vector2f::Zero(), 0, 0, true));
+        Eigen::Vector2f::Zero(), 0, 0, true, 10, true));
     objs.push_back(std::make_unique<Rectangle>(
         Eigen::Vector2f{SIM_WIDTH, 0.2f},
         Eigen::Vector2f{SIM_WIDTH/2, SIM_HEIGHT - 0.1f},
-        Eigen::Vector2f::Zero(), 0, 0, true));
+        Eigen::Vector2f::Zero(), 0, 0, true, 10, true));
     objs.push_back(std::make_unique<Rectangle>(
         Eigen::Vector2f{0.2f, SIM_HEIGHT},
         Eigen::Vector2f{0.1f, SIM_HEIGHT/2},
-        Eigen::Vector2f::Zero(), 0, 0, true));
+        Eigen::Vector2f::Zero(), 0, 0, true, 10, true));
     objs.push_back(std::make_unique<Rectangle>(
         Eigen::Vector2f{0.2f, SIM_HEIGHT},
         Eigen::Vector2f{SIM_WIDTH - 0.1f, SIM_HEIGHT/2},
-        Eigen::Vector2f::Zero(), 0, 0, true));
+        Eigen::Vector2f::Zero(), 0, 0, true, 10, true));
 
     return objs;
 }
@@ -421,7 +421,6 @@ int main()
             // reset timing
             accumulator = 0.0;
 
-            // optional: unpause
             g_paused = false;
 
             std::cout << "Game Reset\n";
@@ -437,7 +436,10 @@ int main()
         glClear(GL_COLOR_BUFFER_BIT);
         glUseProgram(prog);
 
-        std::vector<float> shapeVerts;
+        // std::vector<float> shapeVerts;
+        std::vector<float> birdVerts;
+        std::vector<float> blockVerts;
+        std::vector<float> groundVerts;
         std::vector<float> bandVerts;
         std::vector<float> contactVerts;
         std::vector<float> normalVertsA;
@@ -448,7 +450,7 @@ int main()
         {
             if (obj->type == CIRCLE) {
                 auto* c = static_cast<Circle*>(obj.get());
-                drawCircle(shapeVerts, c->position[0], c->position[1], c->radius);
+                drawCircle(birdVerts, c->position[0], c->position[1], c->radius);
 
                 float cx = c->position[0];
                 float cy = c->position[1];
@@ -458,22 +460,32 @@ int main()
                 float mx = cx + cosf(angle) * c->radius;
                 float my = cy + sinf(angle) * c->radius;
 
-                drawCircle(shapeVerts, mx, my, 0.05f);
+                drawCircle(birdVerts, mx, my, 0.05f);
             }
             else if (obj->type == RECTANGLE) {
                 auto* r = static_cast<Rectangle*>(obj.get());
-                drawRect(shapeVerts,
-                         r->position[0], r->position[1],
-                         r->dimentions[0] * 0.5f,
-                         r->dimentions[1] * 0.5f,
-                         r->rotation);
+
+                if (r -> isBoundary){
+                    drawRect(groundVerts,
+                    r->position[0], r->position[1],
+                    r->dimentions[0] * 0.5f,
+                    r->dimentions[1] * 0.5f,
+                    r->rotation);
+                } 
+                else{
+                    drawRect(blockVerts,
+                    r->position[0], r->position[1],
+                    r->dimentions[0] * 0.5f,
+                    r->dimentions[1] * 0.5f,
+                    r->rotation);
+                }
             }
         }
 
-        // Slingshot — ball + elastic bands
+        // slingshot — ball + elastic bands
         if (!sling.launched)
         {
-            drawCircle(shapeVerts, sling.pullPos[0], sling.pullPos[1], SLING_RADIUS);
+            drawCircle(birdVerts, sling.pullPos[0], sling.pullPos[1], SLING_RADIUS);
 
             // Two fork tips slightly left/right of the anchor
             float forkLX = ndcX(SLING_POS[0] - 0.15f);
@@ -503,7 +515,10 @@ int main()
         //              ndcX(cx - nx*arrowLen), ndcY(cy - ny*arrowLen));
         // }
 
-        drawBatch(vao, vbo, shapeVerts,   prog, 0.0f, 0.863f, 1.0f); // cyan   — objects
+        // drawBatch(vao, vbo, shapeVerts,   prog, 0.0f, 0.863f, 1.0f); // cyan   — objects
+        drawBatch(vao, vbo, birdVerts,  prog, 0.9f, 0.2f, 0.2f); // birds (red)
+        drawBatch(vao, vbo, blockVerts, prog, 0.6f, 0.4f, 0.2f); // blocks (brown)
+        drawBatch(vao, vbo, groundVerts, prog, 0.2f, 0.7f, 0.2f);// ground (green)
         drawBatch(vao, vbo, bandVerts,    prog, 0.9f, 0.7f,   0.2f); // yellow — elastic bands
         drawBatch(vao, vbo, contactVerts, prog, 1.0f, 0.0f,   0.0f); // red    — contact points
         drawBatch(vao, vbo, normalVertsA, prog, 1.0f, 0.0f,   0.0f); // red    — normal A

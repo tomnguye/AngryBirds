@@ -19,6 +19,7 @@ public:
     float mass, inv_mass;
     float inertia, inv_inertia;
     int sleepTimer;
+    bool isBoundary;
 
     PhysicsObject(obj_type t, float i,
         Eigen::Vector2f p = Eigen::Vector2f::Zero(),
@@ -34,8 +35,7 @@ public:
         inv_mass = s ? 0.0f : 1.0f / m;  // stationary objects have infinite mass
         inertia = i;
         inv_inertia = s ? 0.0f : 1.0f / i;
-        sleepTimer = 0;
-        
+        sleepTimer = 0;        
     }
 };
 
@@ -60,11 +60,12 @@ public:
     Rectangle(Eigen::Vector2f d,
         Eigen::Vector2f p = Eigen::Vector2f::Zero(),
         Eigen::Vector2f v = Eigen::Vector2f::Zero(),
-        float r = 0, float w = 0, bool s = false, float m = 10)
+        float r = 0, float w = 0, bool s = false, float m = 10, bool isBoundary = false)
         : PhysicsObject(RECTANGLE, (1.0f/12.0f) * m * (d[0]*d[0] + d[1]*d[1]), p, v, r, w, s, m)
     {
         dimentions = d;
         baseAngle = atan2f(d[1], d[0]);
         boundingRadius = d.norm() / 2.0f;
+        this->isBoundary = isBoundary;
     }
 };
