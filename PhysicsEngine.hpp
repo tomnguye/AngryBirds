@@ -1,23 +1,22 @@
 #pragma once
 #include <vector>
 
-#include <iostream>
-#include <cmath>
 #include <chrono>
+#include <cmath>
+#include <iostream>
 #include <thread>
 
-#include <optional>
 #include <Eigen/Eigen>
+#include <optional>
 
-#include "PhysicsObject.hpp"
-#include "CollisionEvent.hpp"
 #include "CollisionDetection.hpp"
+#include "CollisionEvent.hpp"
+#include "PhysicsObject.hpp"
 #include <unordered_set>
 
-
 class PhysicsEngine {
-    public:
-    const float dt = (float) 1.0f / 60.0f;
+public:
+    const float dt = (float)1.0f / 60.0f;
     // const float dt = 0.001f;   // slowed down for testing
     const float g = -9.8f;
     float restitution = 0.5f;
@@ -33,25 +32,26 @@ class PhysicsEngine {
     };
     // to make slingshot work
     void addObject(std::unique_ptr<PhysicsObject> obj) {
-    objects.push_back(std::move(obj));
+        objects.push_back(std::move(obj));
     }
 
     std::vector<CollisionEvent> getCollisions() {
         return colliding_objects(objects);
     }
 
-    float massAbove(PhysicsObject* obj, 
-                                const std::vector<CollisionEvent>& contacts, 
-                                std::unordered_set<PhysicsObject*>& visited);
+    float massAbove(PhysicsObject *obj,
+                    const std::vector<CollisionEvent> &contacts,
+                    std::unordered_set<PhysicsObject *> &visited);
     void advanceState();
-    void updatePhysics(PhysicsObject& obj);
+    void updatePhysics(PhysicsObject &obj);
     int setState(std::vector<std::unique_ptr<PhysicsObject>>);
-    const std::vector<std::unique_ptr<PhysicsObject>>& getState();
+    const std::vector<std::unique_ptr<PhysicsObject>> &getState();
 
-    private:
+private:
     std::vector<std::unique_ptr<PhysicsObject>> objects;
-    std::optional<Eigen::Vector2f> newtonsMethod(PhysicsObject&, 
-        Eigen::Vector2f (*)(Eigen::Vector2f, const PhysicsObject&, const PhysicsEngine&), 
-        Eigen::Matrix2f (*)(Eigen::Vector2f, const PhysicsEngine&));
-    
+    std::optional<Eigen::Vector2f>
+    newtonsMethod(PhysicsObject &,
+                  Eigen::Vector2f (*)(Eigen::Vector2f, const PhysicsObject &,
+                                      const PhysicsEngine &),
+                  Eigen::Matrix2f (*)(Eigen::Vector2f, const PhysicsEngine &));
 };

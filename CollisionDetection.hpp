@@ -1,6 +1,7 @@
 #pragma once
-#include <optional>
 #include "CollisionEvent.hpp"
 #include <memory>
+#include <optional>
 
-std::vector<CollisionEvent> colliding_objects(std::vector<std::unique_ptr<PhysicsObject>>& objs);
+std::vector<CollisionEvent>
+colliding_objects(std::vector<std::unique_ptr<PhysicsObject>> &objs);
